@@ -1,0 +1,77 @@
+# 玩天气 App 项目规则
+
+## 项目信息
+- **名称**: 玩天气 (PlayWeather)
+- **定位**: 全球特殊天气现象预报平台
+- **Slogan**: 预见金山，不负此行
+- **开发模式**: 单人+AI 开发
+
+## 技术栈
+- **前端框架**: React Native + Expo
+- **语言**: TypeScript
+- **状态管理**: Zustand
+- **UI 样式**: NativeWind (Tailwind CSS)
+- **后端服务**: Supabase (BaaS)
+- **部署平台**: Vercel + Expo EAS
+- **地球仪库**: globe.gl / Three.js
+
+## 代码风格
+- 使用函数组件，不使用 class 组件
+- 使用 async/await，避免 Promise 链
+- 组件名用大驼峰 (WeatherCard)
+- 文件名用小横线 (weather-card.tsx)
+- 所有代码必须包含中文注释
+- 复杂逻辑必须写 JSDoc 文档
+
+## AI 生成要求
+- 生成代码后自动运行 ESLint 检查
+- 优先使用现成组件库，减少重复造轮子
+- 每个组件不超过 300 行，超过则拆分
+- 所有 API 调用必须有错误处理
+- 用户输入必须验证
+
+## 项目结构
+```
+play-weather-app/
+├── app/                    # Expo Router 页面
+│   ├── (tabs)/            # 底部导航页面
+│   │   ├── index.tsx      # 首页（地球仪）
+│   │   ├── forecast.tsx   # 预报页
+│   │   ├── community.tsx  # 社区页
+│   │   └── profile.tsx    # 个人页
+│   └── _layout.tsx        # 根布局
+├── components/            # 可复用组件
+│   ├── ui/                # 基础 UI 组件
+│   ├── weather/           # 天气相关组件
+│   └── globe/             # 地球仪组件
+├── hooks/                 # 自定义 Hooks
+├── utils/                 # 工具函数
+├── services/              # API 服务
+├── store/                 # Zustand 状态管理
+├── types/                 # TypeScript 类型定义
+├── assets/                # 静态资源
+└── constants/             # 常量配置
+```
+
+## 开发原则
+1. **MVP 优先**: 先完成核心功能，再优化细节
+2. **AI 辅助**: 60-70% 代码由 AI 生成，人工 Review 核心逻辑
+3. **快速迭代**: 每周一个可运行版本
+4. **用户导向**: 每个功能都要思考用户价值
+
+## 天气现象分类
+- 🔴 **紧急预警类**: 台风、暴雨、暴雪
+- 🟡 **机会窗口类**: 极光、日照金山、云海、朝霞晚霞
+- 🟢 **长期展望类**: 30 天气候趋势
+
+## 数据源
+- **基础气象**: 和风天气 API (免费 1000 次/天)
+- **极光**: NOAA SWPC (完全免费)
+- **台风**: CMA/JTWC (完全免费)
+- **地形**: NASA SRTM (完全免费)
+
+## 注意事项
+- API 密钥不要提交到 Git
+- 用户隐私数据加密存储
+- 所有网络请求加超时处理
+- 图片资源使用 WebP 格式
