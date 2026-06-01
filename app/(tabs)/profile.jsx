@@ -1,22 +1,19 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Switch } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, Switch, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { getProbabilityColor } from '../../utils/colors';
+import FadeInView from '../../components/animations/FadeInView';
 
 /**
- * 个人中心页面
- * 功能：
- * - 用户信息展示
- * - 我的收藏
- * - 通知设置
- * - 关于我们
+ * 个人中心页面 - 毛玻璃深色主题
  */
 export default function ProfileScreen() {
-  // 通知开关状态
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [probabilityAlert, setProbabilityAlert] = useState(true);
   const [dailyForecast, setDailyForecast] = useState(false);
 
-  // 模拟用户数据
   const user = {
     name: '追光者',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user',
@@ -26,185 +23,205 @@ export default function ProfileScreen() {
     followers: 320,
   };
 
-  // 收藏的地点
   const favoriteLocations = [
     { name: '梅里雪山·飞来寺', probability: 85, level: '史诗级' },
     { name: '贡嘎雪山·冷嘎措', probability: 62, level: '良好' },
     { name: '南迦巴瓦峰·索松村', probability: 45, level: '一般' },
   ];
 
-  return (
-    <ScrollView className="flex-1 bg-gray-50">
-      {/* 用户信息卡片 */}
-      <View className="px-4 pt-12 pb-6 bg-gradient-to-b from-primary-500 to-primary-600">
-        <View className="flex-row items-center">
-          <Image 
-            source={{ uri: user.avatar }} 
-            style={{ width: 80, height: 80, borderRadius: 40 }}
-          />
-          <View className="ml-4 flex-1">
-            <Text className="text-white text-2xl font-bold">{user.name}</Text>
-            <Text className="text-primary-100 text-sm mt-1">{user.level}</Text>
-            <View className="flex-row mt-3">
-              <View className="items-center mr-6">
-                <Text className="text-white text-lg font-bold">{user.works}</Text>
-                <Text className="text-primary-100 text-xs">作品</Text>
-              </View>
-              <View className="items-center mr-6">
-                <Text className="text-white text-lg font-bold">{user.favorites}</Text>
-                <Text className="text-primary-100 text-xs">收藏</Text>
-              </View>
-              <View className="items-center">
-                <Text className="text-white text-lg font-bold">{user.followers}</Text>
-                <Text className="text-primary-100 text-xs">粉丝</Text>
-              </View>
-            </View>
-          </View>
-          <TouchableOpacity className="bg-white/20 px-4 py-2 rounded-full">
-            <Text className="text-white font-medium">编辑资料</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+  // 光晕脉动
+  const haloOpacity = useRef(new Animated.Value(0.3)).current;
+  const haloRadius = useRef(new Animated.Value(60)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(haloOpacity, { toValue: 0.55, duration: 2000, useNativeDriver: false }),
+          Animated.timing(haloOpacity, { toValue: 0.3, duration: 2000, useNativeDriver: false }),
+        ]),
+        Animated.sequence([
+          Animated.timing(haloRadius, { toValue: 80, duration: 2000, useNativeDriver: false }),
+          Animated.timing(haloRadius, { toValue: 60, duration: 2000, useNativeDriver: false }),
+        ]),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
 
-      {/* 我的收藏 */}
-      <View className="px-4 py-6">
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-lg font-bold text-gray-800">⭐ 我的收藏</Text>
-          <TouchableOpacity>
-            <Text className="text-primary-600 text-sm font-medium">查看全部</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {favoriteLocations.map((location, index) => (
-          <TouchableOpacity 
-            key={index}
-            className="bg-white rounded-xl p-4 mb-3 shadow-sm border border-gray-100"
-          >
-            <View className="flex-row items-center justify-between">
-              <View className="flex-1">
-                <Text className="text-base font-bold text-gray-800">{location.name}</Text>
-                <View className="flex-row items-center mt-2">
-                  <Text className="text-sm text-gray-500">今日概率：</Text>
-                  <Text 
-                    className="text-lg font-bold"
-                    style={{ color: location.probability >= 80 ? '#FF6B35' : location.probability >= 60 ? '#FFA500' : '#DAA520' }}
-                  >
-                    {location.probability}%
-                  </Text>
-                  <View 
-                    className="ml-3 px-3 py-1 rounded-full"
-                    style={{ backgroundColor: location.probability >= 80 ? '#FF6B3520' : location.probability >= 60 ? '#FFA50020' : '#DAA52020' }}
-                  >
-                    <Text 
-                      className="text-xs font-medium"
-                      style={{ color: location.probability >= 80 ? '#FF6B35' : location.probability >= 60 ? '#FFA500' : '#DAA520' }}
-                    >
-                      {location.level}
-                    </Text>
+  const glassCard = {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  };
+
+  return (
+    <View className="flex-1" style={{ backgroundColor: '#0F0D1E' }}>
+      <StatusBar style="light" />
+
+      {/* 光晕装饰 */}
+      <Animated.View className="absolute top-10 right-0 w-40 h-40"
+        style={{
+          backgroundColor: 'transparent',
+          shadowColor: '#DAA520',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: haloOpacity,
+          shadowRadius: haloRadius,
+          elevation: 30,
+        }}
+      />
+
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          {/* 用户信息头部 */}
+          <FadeInView delay={0} duration={400}>
+            <View className="mx-4 mt-4 p-5 rounded-3xl" style={glassCard}>
+              <View className="flex-row items-center">
+                <View className="relative">
+                  <Image
+                    source={{ uri: user.avatar }}
+                    style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: 'rgba(218,165,32,0.3)' }}
+                  />
+                  <View className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full items-center justify-center"
+                    style={{ backgroundColor: '#DAA520' }}>
+                    <Text className="text-xs">⭐</Text>
                   </View>
                 </View>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* 通知设置 */}
-      <View className="px-4 py-6 bg-gray-100">
-        <Text className="text-lg font-bold text-gray-800 mb-4">🔔 通知设置</Text>
-        
-        <View className="bg-white rounded-xl overflow-hidden">
-          {/* 总开关 */}
-          <View className="flex-row items-center justify-between p-4 border-b border-gray-100">
-            <View className="flex-1">
-              <Text className="text-base font-medium text-gray-800">通知推送</Text>
-              <Text className="text-xs text-gray-500 mt-1">接收重要天气预警和概率提醒</Text>
-            </View>
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#D1D5DB', true: '#DAA520' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
-          {/* 概率预警 */}
-          <View className="flex-row items-center justify-between p-4 border-b border-gray-100">
-            <View className="flex-1">
-              <Text className="text-base font-medium text-gray-800">高概率预警</Text>
-              <Text className="text-xs text-gray-500 mt-1">收藏地点概率&gt;70% 时推送</Text>
-            </View>
-            <Switch
-              value={probabilityAlert}
-              onValueChange={setProbabilityAlert}
-              trackColor={{ false: '#D1D5DB', true: '#DAA520' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
-          {/* 每日预报 */}
-          <View className="flex-row items-center justify-between p-4">
-            <View className="flex-1">
-              <Text className="text-base font-medium text-gray-800">每日预报</Text>
-              <Text className="text-xs text-gray-500 mt-1">每天早上 8 点推送今日预报</Text>
-            </View>
-            <Switch
-              value={dailyForecast}
-              onValueChange={setDailyForecast}
-              trackColor={{ false: '#D1D5DB', true: '#DAA520' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-        </View>
-      </View>
-
-      {/* 其他功能 */}
-      <View className="px-4 py-6">
-        <View className="bg-white rounded-xl overflow-hidden">
-          {[
-            { icon: 'star', title: '我的作品', subtitle: '查看我的实拍分享' },
-            { icon: 'cloud-download', title: '离线地图', subtitle: '下载景点离线数据' },
-            { icon: 'help-circle', title: '帮助与反馈', subtitle: '遇到问题？联系我们' },
-            { icon: 'shield-checkmark', title: '隐私政策', subtitle: '查看隐私保护政策' },
-            { icon: 'information-circle', title: '关于我们', subtitle: '版本号 v1.0.0' },
-          ].map((item, index) => (
-            <TouchableOpacity 
-              key={index}
-              className={`flex-row items-center justify-between p-4 ${
-                index < 4 ? 'border-b border-gray-100' : ''
-              }`}
-            >
-              <View className="flex-row items-center flex-1">
-                <View className="w-10 h-10 rounded-full bg-primary-50 items-center justify-center">
-                  <Ionicons name={item.icon} size={22} color="#DAA520" />
+                <View className="ml-4 flex-1">
+                  <Text className="text-white text-xl font-bold">{user.name}</Text>
+                  <Text className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>{user.level}</Text>
+                  <View className="flex-row mt-3">
+                    {[
+                      { num: user.works, label: '作品' },
+                      { num: user.favorites, label: '收藏' },
+                      { num: user.followers, label: '粉丝' },
+                    ].map((item, i) => (
+                      <View key={i} className="items-center mr-5">
+                        <Text className="text-white text-base font-bold">{item.num}</Text>
+                        <Text className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.label}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
-                <View className="ml-3 flex-1">
-                  <Text className="text-base font-medium text-gray-800">{item.title}</Text>
-                  <Text className="text-xs text-gray-500 mt-1">{item.subtitle}</Text>
-                </View>
+                <TouchableOpacity
+                  className="px-4 py-2 rounded-full"
+                  style={{ backgroundColor: 'rgba(218,165,32,0.15)', borderWidth: 1, borderColor: 'rgba(218,165,32,0.2)' }}
+                >
+                  <Text style={{ color: '#DAA520', fontWeight: '600', fontSize: 13 }}>编辑</Text>
+                </TouchableOpacity>
               </View>
-              <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
+            </View>
+          </FadeInView>
+
+          {/* 我的收藏 */}
+          <FadeInView delay={100} duration={400}>
+            <View className="mx-4 mt-5">
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-white text-base font-bold">⭐ 我的收藏</Text>
+                <TouchableOpacity>
+                  <Text className="text-sm font-medium" style={{ color: '#DAA520' }}>查看全部</Text>
+                </TouchableOpacity>
+              </View>
+              {favoriteLocations.map((loc, i) => {
+                const probColor = getProbabilityColor(loc.probability);
+                return (
+                  <TouchableOpacity key={i} className="rounded-xl p-4 mb-3" style={glassCard}>
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-1">
+                        <Text className="text-white text-base font-semibold">{loc.name}</Text>
+                        <View className="flex-row items-center mt-1.5">
+                          <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>今日概率：</Text>
+                          <Text className="text-lg font-bold" style={{ color: probColor }}>{loc.probability}%</Text>
+                          <View className="ml-3 px-2.5 py-0.5 rounded-full"
+                            style={{ backgroundColor: `${probColor}20` }}>
+                            <Text className="text-xs font-medium" style={{ color: probColor }}>{loc.level}</Text>
+                          </View>
+                        </View>
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.25)" />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </FadeInView>
+
+          {/* 通知设置 */}
+          <FadeInView delay={200} duration={400}>
+            <View className="mx-4 mt-5">
+              <Text className="text-white text-base font-bold mb-3">🔔 通知设置</Text>
+              <View className="rounded-2xl overflow-hidden" style={glassCard}>
+                {[
+                  { label: '通知推送', desc: '接收重要天气预警和概率提醒', val: notificationsEnabled, set: setNotificationsEnabled },
+                  { label: '高概率预警', desc: '收藏地点概率>70% 时推送', val: probabilityAlert, set: setProbabilityAlert },
+                  { label: '每日预报', desc: '每天早上 8 点推送今日预报', val: dailyForecast, set: setDailyForecast },
+                ].map((item, i, arr) => (
+                  <View key={i} className={`flex-row items-center justify-between p-4 ${i < arr.length - 1 ? '' : ''}`}
+                    style={i < arr.length - 1 ? { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' } : {}}>
+                    <View className="flex-1 mr-3">
+                      <Text className="text-white text-sm font-medium">{item.label}</Text>
+                      <Text className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.desc}</Text>
+                    </View>
+                    <Switch
+                      value={item.val}
+                      onValueChange={item.set}
+                      trackColor={{ false: 'rgba(255,255,255,0.1)', true: '#DAA520' }}
+                      thumbColor="#FFFFFF"
+                    />
+                  </View>
+                ))}
+              </View>
+            </View>
+          </FadeInView>
+
+          {/* 其他功能 */}
+          <FadeInView delay={300} duration={400}>
+            <View className="mx-4 mt-5">
+              <View className="rounded-2xl overflow-hidden" style={glassCard}>
+                {[
+                  { icon: 'star', title: '我的作品', sub: '查看我的实拍分享' },
+                  { icon: 'cloud-download', title: '离线地图', sub: '下载景点离线数据' },
+                  { icon: 'help-circle', title: '帮助与反馈', sub: '遇到问题？联系我们' },
+                  { icon: 'shield-checkmark', title: '隐私政策', sub: '查看隐私保护政策' },
+                  { icon: 'information-circle', title: '关于我们', sub: '版本号 v1.0.0' },
+                ].map((item, i, arr) => (
+                  <TouchableOpacity key={i} className="flex-row items-center justify-between p-4"
+                    style={i < arr.length - 1 ? { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' } : {}}>
+                    <View className="flex-row items-center flex-1">
+                      <View className="w-9 h-9 rounded-full items-center justify-center"
+                        style={{ backgroundColor: 'rgba(218,165,32,0.12)' }}>
+                        <Ionicons name={item.icon} size={20} color="#DAA520" />
+                      </View>
+                      <View className="ml-3 flex-1">
+                        <Text className="text-white text-sm font-medium">{item.title}</Text>
+                        <Text className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.sub}</Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.2)" />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </FadeInView>
+
+          {/* 退出登录 */}
+          <View className="mx-4 mt-6 mb-3">
+            <TouchableOpacity className="rounded-2xl p-4 items-center"
+              style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)' }}>
+              <View className="flex-row items-center">
+                <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+                <Text className="ml-2 text-red-400 font-medium text-sm">退出登录</Text>
+              </View>
             </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* 退出登录按钮 */}
-      <View className="px-4 py-6">
-        <TouchableOpacity className="bg-white border-2 border-red-500 rounded-xl p-4 items-center">
-          <View className="flex-row items-center">
-            <Ionicons name="log-out-outline" size={22} color="#EF4444" />
-            <Text className="ml-2 text-red-500 font-medium">退出登录</Text>
           </View>
-        </TouchableOpacity>
-      </View>
 
-      {/* 底部版权信息 */}
-      <View className="px-4 py-6 items-center">
-        <Text className="text-xs text-gray-400">玩天气 · 预见金山不负此行</Text>
-        <Text className="text-xs text-gray-400 mt-1">© 2026 PlayWeather Team</Text>
-      </View>
-    </ScrollView>
+          {/* 底部 */}
+          <View className="py-5 items-center">
+            <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>玩天气 · 预见金山不负此行</Text>
+            <Text className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.15)' }}>© 2026 PlayWeather Team</Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }

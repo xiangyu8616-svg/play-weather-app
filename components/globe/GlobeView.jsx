@@ -1,5 +1,5 @@
 import React, { useRef, useMemo, useCallback } from 'react';
-import { View, Dimensions } from 'react-native';
+import { View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 /**
@@ -12,15 +12,8 @@ import { WebView } from 'react-native-webview';
  * - 点击显示详情
  * - 数据层叠加（天气现象标记点）
  */
-interface GlobeViewProps {
-  selectedDay: number;
-  selectedPhenomenon: string;
-  onGlobePress: () => void;
-  onPointData?: (data: any) => void;
-}
-
 // 台风路径数据
-const generateTyphoonPath = (day: number) => {
+const generateTyphoonPath = (day) => {
   const path = [
     { lat: 18.5, lng: 125.0, size: 0.4, color: '#4B5563', name: '热带低压', intensity: 'TD' },
     { lat: 19.2, lng: 124.0, size: 0.5, color: '#3B82F6', name: '热带风暴', intensity: 'TS' },
@@ -40,7 +33,7 @@ const generateTyphoonPath = (day: number) => {
 };
 
 // 模拟天气现象数据（实际应从服务层获取）
-const generatePhenomenonData = (phenomenonType: string, day: number) => {
+const generatePhenomenonData = (phenomenonType, day) => {
   // 根据天数添加一些随机性
   const randomOffset = day * 0.1;
   
@@ -94,13 +87,13 @@ const generatePhenomenonData = (phenomenonType: string, day: number) => {
   }
 };
 
-export default function GlobeView({ 
+const GlobeView = React.memo(function GlobeView({ 
   selectedDay, 
   selectedPhenomenon,
   onGlobePress,
   onPointData
-}: GlobeViewProps) {
-  const webViewRef = useRef<WebView>(null);
+}) {
+  const webViewRef = useRef(null);
 
   // 生成现象数据
   const phenomenonData = useMemo(() => {
@@ -235,7 +228,7 @@ export default function GlobeView({
   }, [phenomenonData]);
 
   // 处理 WebView 消息
-  const handleMessage = useCallback((event: any) => {
+  const handleMessage = useCallback((event) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'pointClick') {
@@ -265,4 +258,6 @@ export default function GlobeView({
       />
     </View>
   );
-}
+});
+
+export default GlobeView;

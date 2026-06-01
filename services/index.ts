@@ -16,6 +16,7 @@ export { default as auroraService } from './auroraService';
 export { default as astronomyService } from './astronomyService';
 export { default as phenomenonService } from './phenomenonService';
 export * as cache from './cache';
+export { default as qweatherService } from './qweatherService';
 
 // 重新导出常用类型
 export type {

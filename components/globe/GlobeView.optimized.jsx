@@ -1,5 +1,5 @@
 import React, { useRef, useMemo, useCallback, useEffect, useState } from 'react';
-import { View, Dimensions, PixelRatio } from 'react-native';
+import { View, Text, Dimensions, PixelRatio } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 /**
@@ -17,14 +17,6 @@ import { WebView } from 'react-native-webview';
  * - 2K 屏 (2560x1440): 60fps
  * - 1080p (1920x1080): 60fps
  */
-interface GlobeViewProps {
-  selectedDay: number;
-  selectedPhenomenon: string;
-  onGlobePress: () => void;
-  onPointData?: (data: any) => void;
-  performanceMode?: 'quality' | 'balanced' | 'performance';
-}
-
 // 屏幕性能检测
 const getPerformanceProfile = () => {
   const pixelRatio = PixelRatio.get();
@@ -63,7 +55,7 @@ const getPerformanceProfile = () => {
 };
 
 // 台风路径数据
-const generateTyphoonPath = (day: number) => {
+const generateTyphoonPath = (day) => {
   const path = [
     { lat: 18.5, lng: 125.0, size: 0.4, color: '#4B5563', name: '热带低压', intensity: 'TD' },
     { lat: 19.2, lng: 124.0, size: 0.5, color: '#3B82F6', name: '热带风暴', intensity: 'TS' },
@@ -82,7 +74,7 @@ const generateTyphoonPath = (day: number) => {
 };
 
 // 模拟天气现象数据（带性能优化）
-const generatePhenomenonData = (phenomenonType: string, day: number, maxPoints: number) => {
+const generatePhenomenonData = (phenomenonType, day, maxPoints) => {
   const randomOffset = day * 0.1;
   
   let data = [];
@@ -140,14 +132,14 @@ const generatePhenomenonData = (phenomenonType: string, day: number, maxPoints: 
   return data.slice(0, maxPoints);
 };
 
-export default function GlobeView({ 
+const GlobeView = React.memo(function GlobeView({ 
   selectedDay, 
   selectedPhenomenon,
   onGlobePress,
   onPointData,
   performanceMode = 'balanced'
-}: GlobeViewProps) {
-  const webViewRef = useRef<WebView>(null);
+}) {
+  const webViewRef = useRef(null);
   const [fps, setFps] = useState(60);
   const [renderQuality, setRenderQuality] = useState<'high' | 'medium' | 'low'>('medium');
   
@@ -337,7 +329,7 @@ export default function GlobeView({
   }, [phenomenonData, typhoonPath, finalConfig]);
 
   // 处理 WebView 消息
-  const handleMessage = useCallback((event: any) => {
+  const handleMessage = useCallback((event) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'pointClick') {
@@ -356,7 +348,7 @@ export default function GlobeView({
           setRenderQuality('high');
         }
       } else if (data.type === 'loaded') {
-        console.log('Globe loaded with quality:', data.quality);
+        // Globe loaded successfully
       }
     } catch (error) {
       console.error('WebView message error:', error);
@@ -394,4 +386,6 @@ export default function GlobeView({
       )}
     </View>
   );
-}
+});
+
+export default GlobeView;

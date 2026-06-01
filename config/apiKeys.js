@@ -3,10 +3,16 @@
  * 
  * ⚠️ 注意：这是测试版本，仅用于本地开发
  * 正式上线前请填入你的实际 API Key
+ *
+ * 凭据策略（2026-06-01）：
+ * - 线上凭据（已加白名单 play-weather-app.vercel.app）：用于 Vercel 生产构建
+ * - 本地凭据（无限制）：在和风天气控制台另外创建，仅用于 localhost 开发
+ * - 当前文件中用的是本地凭据，构建上线前请替换为线上凭据
  */
 
-// 和风天气 API Key（测试用占位符）
-export const QWEATHER_KEY = 'test_key_for_development';
+// 和风天气 API Key（本地开发用，无域名限制）
+// 上线前请替换为已加白名单的线上凭据
+export const QWEATHER_KEY = '71bebee8452d4dab8ae88e50460f3bdf';
 
 // API 基础配置
 export const API_CONFIG = {

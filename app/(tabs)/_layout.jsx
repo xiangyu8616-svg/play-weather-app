@@ -4,31 +4,45 @@ import { Ionicons } from '@expo/vector-icons';
 
 /**
  * 底部导航布局
+ * Note: Expo Router automatically code-splits each tab route file.
+ * Additional lazy loading is applied within individual tab components
+ * for their heavy dependencies (images, third-party libs, etc.)
  */
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#DAA520',
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarInactiveTintColor: 'rgba(255,255,255,0.35)',
+        headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'rgba(15,13,30,0.85)',
           borderTopWidth: 1,
-          borderTopColor: '#F3F4F6',
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 60,
+          borderTopColor: 'rgba(218,165,32,0.12)',
+          paddingBottom: 6,
+          paddingTop: 6,
+          height: 58,
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          elevation: 0,
+          // 毛玻璃效果
+          backdropFilter: 'blur(20px)',
+          shadowColor: '#DAA520',
+          shadowOffset: { width: 0, height: -1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 10,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '600',
+          letterSpacing: 0.3,
         },
-        headerStyle: {
-          backgroundColor: '#FFFFFF',
-        },
-        headerTitleStyle: {
-          fontWeight: '600',
-          fontSize: 18,
+        tabBarItemStyle: {
+          paddingVertical: 2,
+          // Ensure touch target ≥ 44px
+          minHeight: 44,
         },
       }}
     >
