@@ -12,6 +12,8 @@
 
 // 和风天气 API Key（本地开发用，无域名限制）
 // 上线前请替换为已加白名单的线上凭据
+// 本地开发 + Vercel 生产都用 TNPKF2T39E（不限制访问来源）
+// TH59QRQ6EY（网站模式）仅限白名单域名，备用
 export const QWEATHER_KEY = '71bebee8452d4dab8ae88e50460f3bdf';
 
 // API 基础配置
