@@ -16,7 +16,7 @@ import { getCachedData, setCachedData, isCacheValid } from './cache';
 // ==================== 配置 ====================
 
 const GEO_API_BASE = 'https://geoapi.qweather.com/v2';
-const WEATHER_API_BASE = 'https://devapi.qweather.com/v7';
+const WEATHER_API_BASE = 'https://m85ctw7p24.re.qweatherapi.com/v7';
 
 // ==================== 类型定义 ====================
 

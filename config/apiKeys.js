@@ -18,7 +18,7 @@ export const QWEATHER_KEY = '71bebee8452d4dab8ae88e50460f3bdf';
 
 // API 基础配置
 export const API_CONFIG = {
-  baseURL: 'https://devapi.qweather.com/v7',
+  baseURL: 'https://m85ctw7p24.re.qweatherapi.com/v7',
   timeout: 10000,
   lang: 'zh', // 语言：zh=中文，en=英文
 };

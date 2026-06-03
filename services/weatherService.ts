@@ -21,7 +21,7 @@ const QWEATHER_CONFIG = {
   type: 'weather'
 };
 
-const BASE_URL = 'https://devapi.qweather.com/v7';
+const BASE_URL = 'https://m85ctw7p24.re.qweatherapi.com/v7';
 
 // 创建 axios 实例
 const apiClient = axios.create({
