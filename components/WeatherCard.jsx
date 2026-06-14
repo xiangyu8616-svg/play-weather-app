@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Brand, Accent, Surface, TextColor, Spacing, Radius, Shadow, FontSize, FontWeight, goldAlpha, whiteAlpha, skyBlueAlpha } from '../../styles/designTokens';
+import { Brand, Accent, Surface, TextColor, Spacing, Radius, Shadow, FontSize, FontWeight, goldAlpha, whiteAlpha, skyBlueAlpha } from '../styles/designTokens';
 
 // ==================== 辅助函数 ====================
 

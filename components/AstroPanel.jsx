@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Brand, Accent, TextColor, Spacing, Radius, FontSize, FontWeight, goldAlpha, skyBlueAlpha } from '../../styles/designTokens';
+import { Brand, Accent, TextColor, Spacing, Radius, FontSize, FontWeight, goldAlpha, skyBlueAlpha } from '../styles/designTokens';
 
 /**
  * 天文面板 — 日出日落/月相（黄金时刻 & 蓝调时刻）

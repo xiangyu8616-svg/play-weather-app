@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Brand, TextColor, Spacing, Radius, FontSize, FontWeight, goldAlpha, whiteAlpha } from '../../styles/designTokens';
+import { Brand, TextColor, Spacing, Radius, FontSize, FontWeight, goldAlpha, whiteAlpha } from '../styles/designTokens';
 import AstroPanel from './AstroPanel';
 
 /**
