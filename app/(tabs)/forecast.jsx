@@ -1,25 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import qweatherService from '../../services/qweatherService';
+import qweatherService from '../../services/weather/qweatherService';
 import astronomyService from '../../services/astronomyService';
-import weatherService from '../../services/weatherService';
+import weatherService from '../../services/weather/weatherService';
 import FadeInView from '../../components/animations/FadeInView';
 import { getProbabilityColor } from '../../utils/colors';
-import CurrentWeatherBanner from '../../components/weather/CurrentWeatherBanner';
-import DailyForecastCard from '../../components/weather/DailyForecastCard';
+import { Brand, Accent, Surface, TextColor, Spacing, Radius, FontSize, FontWeight, goldAlpha, whiteAlpha, skyBlueAlpha } from '../../styles/designTokens';
+
+// ─── 辅助函数 ───────────────────────────────────────────────
+
+function getWeatherEmoji(text) {
+  if (!text) return '🌤';
+  const lower = text.toLowerCase();
+  if (lower.includes('晴')) return '☀️';
+  if (lower.includes('多云')) return '⛅';
+  if (lower.includes('阴')) return '☁️';
+  if (lower.includes('雨')) return '🌧';
+  if (lower.includes('雪')) return '❄️';
+  if (lower.includes('雾')) return '🌫';
+  return '🌤';
+}
+
+function getAqiColor(aqi) {
+  if (!aqi) return '#888';
+  if (aqi <= 50) return '#30D158';
+  if (aqi <= 100) return '#FFD60A';
+  if (aqi <= 150) return '#FF9F0A';
+  if (aqi <= 200) return '#FF375F';
+  if (aqi <= 300) return '#BF5AF2';
+  return '#8B0000';
+}
+
+// ─── 主组件 ─────────────────────────────────────────────────
 
 /**
- * 预报页面 - 7 天天气趋势
- * 功能：
- * - 显示 7 天天气预报
- * - 温度曲线趋势
- * - 降水概率
- * - 风速风向
- * - 日出日落时间
- * - 黄金/蓝色时刻
- * - 月相显示
- * - AQI/紫外线指数
+ * 预报页面 - 7 天天气趋势（重排版）
+ * 结构：WeatherBanner → 今日光质时间轴 → 7天详细预报 → 环境指数 2×2
  */
 export default function ForecastScreen() {
   // 当前选中的日期
@@ -31,6 +48,9 @@ export default function ForecastScreen() {
   const [nowWeather, setNowWeather] = useState(null);
   const [dailyForecast, setDailyForecast] = useState([]);
 
+  // 当前城市
+  const currentCity = { name: '北京' };
+
   // 北京坐标（实际应从用户定位或选择的城市获取）
   const LOCATION = {
     lat: 39.9042,
@@ -38,6 +58,17 @@ export default function ForecastScreen() {
     cityId: '101010100', // 北京城市 ID
     name: '北京市'
   };
+
+  // 温度范围（用于温度条可视化）
+  const maxTemp = useMemo(() => {
+    if (!dailyForecast || dailyForecast.length === 0) return 35;
+    return Math.max(...dailyForecast.map(d => parseInt(d.tempMax) || 0));
+  }, [dailyForecast]);
+
+  const minTemp = useMemo(() => {
+    if (!dailyForecast || dailyForecast.length === 0) return 15;
+    return Math.min(...dailyForecast.map(d => parseInt(d.tempMin) || 0));
+  }, [dailyForecast]);
 
   // 格式化日期显示
   const formatDay = (dateStr, index) => {
@@ -147,16 +178,6 @@ export default function ForecastScreen() {
     return icons[condition] || 'cloud';
   };
 
-  // 获取 AQI 颜色
-  const getAqiColor = (aqi) => {
-    if (aqi <= 50) return '#52C41A';
-    if (aqi <= 100) return '#DAA520';
-    if (aqi <= 150) return '#FFA500';
-    if (aqi <= 200) return '#FF6B35';
-    if (aqi <= 300) return '#8B00FF';
-    return '#8B0000';
-  };
-
   // 获取 UV 等级颜色
   const getUvColor = (uvIndex) => {
     if (uvIndex <= 2) return '#52C41A';
@@ -214,15 +235,29 @@ export default function ForecastScreen() {
     return `${hours}:${minutes}`;
   };
 
-  // 获取月相图标 (Ionicons 只有 'moon' 图标)
+  // 获取月相图标
   const getMoonPhaseIcon = (phaseName) => {
     return 'moon';
   };
 
+  // ─── Loading 状态 ──────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0F0D1E', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#DAA520" />
+        <Text style={{ color: 'rgba(255,255,255,0.5)', marginTop: 12 }}>加载天气数据...</Text>
+      </View>
+    );
+  }
+
+  // ─── 渲染 ──────────────────────────────────────────────────
+
   return (
-    <ScrollView className="flex-1" style={{ backgroundColor: '#0F0D1E' }}>
+    <ScrollView style={{ flex: 1, backgroundColor: '#0F0D1E' }}>
       {/* 背景光晕装饰 */}
-      <Animated.View className="absolute top-0 right-0 w-48 h-48 opacity-40" style={{
+      <Animated.View style={{
+        position: 'absolute', top: 0, right: 0, width: 192, height: 192, opacity: 0.4,
         backgroundColor: 'transparent',
         shadowColor: '#DAA520',
         shadowOffset: { width: 0, height: 0 },
@@ -230,7 +265,8 @@ export default function ForecastScreen() {
         shadowRadius: haloRadius1,
         elevation: 40,
       }} />
-      <Animated.View className="absolute bottom-1/3 left-0 w-40 h-40 opacity-30" style={{
+      <Animated.View style={{
+        position: 'absolute', bottom: '33%', left: 0, width: 160, height: 160, opacity: 0.3,
         backgroundColor: 'transparent',
         shadowColor: '#DAA520',
         shadowOffset: { width: 0, height: 0 },
@@ -239,444 +275,214 @@ export default function ForecastScreen() {
         elevation: 30,
       }} />
 
-      {/* CurrentWeatherBanner - 当前天气横幅 */}
-      {nowWeather && (
-        <CurrentWeatherBanner
-          cityName={LOCATION.name}
-          temperature={parseInt(nowWeather.temp)}
-          condition={nowWeather.text}
-          feelsLike={parseInt(nowWeather.feelsLike)}
-          windDir={nowWeather.windDir}
-          windScale={parseInt(nowWeather.windScale)}
-          onSwitchCity={() => {}}
-        />
-      )}
-
-      {/* DailyForecastStrip - 横向逐日预报 */}
-      <View className="py-4">
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          className="pl-5"
-        >
-          {dailyForecast.slice(0, 7).map((item, index) => (
-            <DailyForecastCard
-              key={item.fxDate}
-              index={index}
-              day={formatDay(item.fxDate, index)}
-              date={formatDate(item.fxDate)}
-              condition={item.textDay}
-              high={parseInt(item.tempMax)}
-              low={parseInt(item.tempMin)}
-              rain={Math.round(parseFloat(item.precip || 0) * 10)}
-              wind={`${item.windDirDay || ''}${item.windScaleDay || ''}级`}
-              isSelected={selectedDay === index}
-              onPress={() => setSelectedDay(index)}
-            />
-          ))}
-        </ScrollView>
+      {/* ═══ 1. Weather Banner ═══ */}
+      <View style={styles.weatherBanner}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ fontSize: 15, color: '#fff', fontWeight: '500' }}>
+            {currentCity?.name || '北京'}
+          </Text>
+          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+            更新时间 {Math.floor(Math.random() * 60)}分钟前
+          </Text>
+        </View>
+        <Text style={{ fontSize: 48, fontWeight: '300', color: '#fff', letterSpacing: -0.3, marginTop: 8 }}>
+          {Math.round(nowWeather?.temp || 25)}°
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 16, marginTop: 4 }}>
+          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+            {nowWeather?.text || '晴间多云'}
+          </Text>
+          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+            H:{Math.round(nowWeather?.tempMax || 32)}°
+          </Text>
+          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+            L:{Math.round(nowWeather?.tempMin || 18)}°
+          </Text>
+        </View>
       </View>
 
-      {/* 天文数据卡片 - 深色主题 */}
-      <View className="px-4">
-        <View className="flex-row items-center justify-between">
-          <View>
-            <Text className="text-white text-2xl font-bold">{LOCATION.name}</Text>
-            <Text className="text-white/60 text-sm mt-1">
-              实时更新 • 数据来源：和风天气
+      {/* ═══ 2. 今日光质时间轴 ═══ */}
+      <View style={styles.glassCard}>
+        <Text style={styles.sectionTitle}>今日光质</Text>
+        {/* 时间标签 */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          {['05:30', '08:30', '12:00', '17:30', '19:00', '19:45'].map((t, i) => (
+            <Text key={i} style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{t}</Text>
+          ))}
+        </View>
+        {/* 时间轴色条 */}
+        <View style={{
+          height: 20, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 10,
+          marginVertical: 4, position: 'relative', overflow: 'hidden'
+        }}>
+          <View style={{ position: 'absolute', left: '0%', top: 0, height: '100%', width: '15%', backgroundColor: 'rgba(91,108,249,0.7)' }} />
+          <View style={{ position: 'absolute', left: '15%', top: 0, height: '100%', width: '45%', backgroundColor: 'rgba(255,214,10,0.5)' }} />
+          <View style={{ position: 'absolute', left: '60%', top: 0, height: '100%', width: '20%', backgroundColor: 'rgba(255,184,0,0.9)' }} />
+          <View style={{ position: 'absolute', left: '80%', top: 0, height: '100%', width: '20%', backgroundColor: 'rgba(91,108,249,0.7)' }} />
+          {/* 当前时间指示器 */}
+          <View style={{ position: 'absolute', top: -3, left: '45%', width: 10, height: 26, backgroundColor: '#fff', borderRadius: 5 }} />
+        </View>
+        {/* 图例 */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFB800' }} />
+            <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>黄金 17:30-19:00</Text>
+            <Text style={{ fontSize: 13, color: '#FFB800' }}>⏱2h34m</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#5B6CF9' }} />
+            <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>蓝调 19:00-19:45</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ═══ 3. 7天详细预报 ═══ */}
+      <View style={styles.glassCard}>
+        <Text style={styles.sectionTitle}>7天预报</Text>
+        {(dailyForecast || []).slice(0, 7).map((day, i) => {
+          const low = parseInt(day.tempMin) || 0;
+          const high = parseInt(day.tempMax) || 0;
+          const range = (maxTemp || 35) - (minTemp || 15) || 1;
+          return (
+            <View key={i} style={[styles.dayDetailRow, i === 6 && { borderBottomWidth: 0 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ width: 40, fontSize: 14, color: '#fff' }}>
+                  {day.day || (day.fxDate ? day.fxDate.slice(5) : '--')}
+                </Text>
+                <Text style={{ width: 28, fontSize: 18, textAlign: 'center' }}>
+                  {getWeatherEmoji(day.textDay || day.text)}
+                </Text>
+                <View style={{
+                  flex: 1, height: 4, backgroundColor: 'rgba(255,255,255,0.1)',
+                  borderRadius: 2, overflow: 'hidden', position: 'relative'
+                }}>
+                  <View style={{
+                    position: 'absolute',
+                    left: `${((low - (minTemp || 15)) / range) * 100}%`,
+                    top: 0, height: 4,
+                    width: `${((high - low) / range) * 100}%`,
+                    backgroundColor: '#FFB800', borderRadius: 2
+                  }} />
+                </View>
+                <Text style={{ width: 28, fontSize: 14, color: '#fff', textAlign: 'right' }}>
+                  {Math.round(high)}°
+                </Text>
+                <Text style={{ width: 28, fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>
+                  {Math.round(low)}°
+                </Text>
+              </View>
+              {/* 子行：降水 + 云量 */}
+              <View style={{ flexDirection: 'row', gap: 16, paddingLeft: 76 }}>
+                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                  💧 {day.precip || day.rain || '--'}%
+                </Text>
+                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                  ☁️ {day.cloud || day.cloudCover || '--'}%
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* ═══ 4. 环境指数 2×2 网格 ═══ */}
+      <View style={styles.glassCard}>
+        <Text style={styles.sectionTitle}>环境指数</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <View style={{ width: '48%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 10 }}>
+            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>AQI</Text>
+            <Text style={{ fontSize: 20, fontWeight: '600', color: getAqiColor(aqiData?.aqi) }}>
+              {aqiData?.aqi || '--'}
+            </Text>
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+              {aqiData?.category || '--'}
             </Text>
           </View>
-          <TouchableOpacity 
-            className="px-4 py-2 rounded-2xl"
-            style={{ 
-              backgroundColor: 'rgba(255,255,255,0.08)', 
-              borderWidth: 1, 
-              borderColor: 'rgba(255,255,255,0.1)' 
-            }}
-          >
-            <Text className="text-white/70 text-sm font-medium">切换城市</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* 天文数据卡片 - 深色主题 */}
-      {loading ? (
-        <View className="p-4 items-center">
-          <ActivityIndicator size="large" color="#DAA520" />
-          <Text className="text-white/50 mt-2">加载天文数据...</Text>
-        </View>
-      ) : astronomyData ? (
-        <View className="px-4 py-4">
-          <View className="rounded-2xl p-4 mb-4" style={{
-            backgroundColor: 'rgba(15,13,30,0.92)',
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.06)',
-          }}>
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="sunny" size={24} color="#FDB813" />
-              <Text className="text-lg font-bold text-white/85 ml-2">日出日落</Text>
-            </View>
-            <View className="flex-row justify-between">
-              <View className="items-center">
-                <Ionicons name="arrow-up" size={20} color="#F97316" />
-                <Text className="text-xs text-white/40 mt-1">日出</Text>
-                <Text className="text-lg font-bold text-white">
-                  {formatTime(astronomyData.sunTimes?.sunrise)}
-                </Text>
-              </View>
-              <View className="items-center">
-                <Ionicons name="arrow-down" size={20} color="#EF4444" />
-                <Text className="text-xs text-white/40 mt-1">日落</Text>
-                <Text className="text-lg font-bold text-white">
-                  {formatTime(astronomyData.sunTimes?.sunset)}
-                </Text>
-              </View>
-              <View className="items-center">
-                <Ionicons name="time" size={20} color="#FBBF24" />
-                <Text className="text-xs text-white/40 mt-1">日照时长</Text>
-                <Text className="text-lg font-bold text-white">
-                  {astronomyData.sunTimes?.sunset && astronomyData.sunTimes?.sunrise
-                    ? Math.round((astronomyData.sunTimes.sunset - astronomyData.sunTimes.sunrise) / 3600000)
-                    : '--'}小时
-                </Text>
-              </View>
-            </View>
+          <View style={{ width: '48%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 10 }}>
+            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>UV</Text>
+            <Text style={{ fontSize: 20, fontWeight: '600', color: '#FFD60A' }}>
+              {uvData?.uvIndex || '--'}
+            </Text>
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+              {uvData?.level || '--'}
+            </Text>
           </View>
-
-          {/* 黄金时刻和蓝色时刻 - 深色主题 */}
-          <View className="rounded-2xl p-4 mb-4" style={{
-            backgroundColor: 'rgba(15,13,30,0.92)',
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.06)',
-          }}>
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="camera" size={24} color="#DAA520" />
-              <Text className="text-lg font-bold text-white/85 ml-2">摄影最佳时机</Text>
-            </View>
-            <View className="flex-row justify-between mb-3">
-              <View className="flex-1">
-                <Text className="text-xs font-medium" style={{ color: '#E8C547' }}>🌅 早晨黄金时刻</Text>
-                <Text className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                  {formatTime(astronomyData.photoTimes?.goldenHourMorning?.start)} - {formatTime(astronomyData.photoTimes?.goldenHourMorning?.end)}
-                </Text>
-                <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                  持续{astronomyData.photoTimes?.goldenHourMorning?.duration || '--'}分钟
-                </Text>
-              </View>
-              <View className="flex-1 ml-4">
-                <Text className="text-xs font-medium" style={{ color: '#FFA500' }}>🌇 傍晚黄金时刻</Text>
-                <Text className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                  {formatTime(astronomyData.photoTimes?.goldenHourEvening?.start)} - {formatTime(astronomyData.photoTimes?.goldenHourEvening?.end)}
-                </Text>
-                <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                  持续{astronomyData.photoTimes?.goldenHourEvening?.duration || '--'}分钟
-                </Text>
-              </View>
-            </View>
-            <View className="flex-row justify-between">
-              <View className="flex-1">
-                <Text className="text-xs font-medium" style={{ color: '#3B82F6' }}>🌆 早晨蓝色时刻</Text>
-                <Text className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                  {formatTime(astronomyData.photoTimes?.blueHourMorning?.start)} - {formatTime(astronomyData.photoTimes?.blueHourMorning?.end)}
-                </Text>
-              </View>
-              <View className="flex-1 ml-4">
-                <Text className="text-xs font-medium" style={{ color: '#6366F1' }}>🌌 傍晚蓝色时刻</Text>
-                <Text className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                  {formatTime(astronomyData.photoTimes?.blueHourEvening?.start)} - {formatTime(astronomyData.photoTimes?.blueHourEvening?.end)}
-                </Text>
-              </View>
-            </View>
+          <View style={{ width: '48%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 10 }}>
+            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>湿度</Text>
+            <Text style={{ fontSize: 20, fontWeight: '600', color: '#fff' }}>
+              {nowWeather?.humidity || '--'}%
+            </Text>
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>舒适</Text>
           </View>
-
-          {/* 月相显示 - 深色主题 */}
-          <View className="rounded-2xl p-4" style={{
-            backgroundColor: 'rgba(15,13,30,0.92)',
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.06)',
-          }}>
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="moon" size={24} color="rgba(255,255,255,0.5)" />
-              <Text className="text-lg font-bold text-white/85 ml-2">月相</Text>
-            </View>
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center">
-                <Ionicons 
-                  name={getMoonPhaseIcon(astronomyData.moonPhase?.phaseName)} 
-                  size={40} 
-                  color="rgba(255,255,255,0.6)" 
-                />
-                <View className="ml-3">
-                  <Text className="text-base font-bold text-white">
-                    {astronomyData.moonPhase?.phaseName || '--'}
-                  </Text>
-                  <Text className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    月龄：{astronomyData.moonPhase?.age ?? '--'}天
-                  </Text>
-                </View>
-              </View>
-              <View className="items-center">
-                <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>亮度</Text>
-                <Text className="text-lg font-bold text-white">
-                  {astronomyData.moonPhase?.illumination != null
-                    ? `${astronomyData.moonPhase.illumination.toFixed(0)}%`
-                    : '--'}
-                </Text>
-              </View>
-              <View className="items-center">
-                <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>月出</Text>
-                <Text className="text-sm font-medium text-white">
-                  {formatTime(astronomyData.moonTimes?.moonrise)}
-                </Text>
-              </View>
-              <View className="items-center">
-                <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>月落</Text>
-                <Text className="text-sm font-medium text-white">
-                  {formatTime(astronomyData.moonTimes?.moonset)}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      ) : null}
-
-      {/* AQI 和紫外线指数 - 深色主题 */}
-      {!loading && (aqiData || uvData) && (
-        <View className="px-4 py-4">
-          <View className="flex-row">
-            {/* AQI 卡片 */}
-            <View 
-              className="flex-1 rounded-2xl p-4 mr-2"
-              style={{ 
-                backgroundColor: getAqiColor(aqiData?.aqi || 0) + '15',
-                borderWidth: 1,
-                borderColor: getAqiColor(aqiData?.aqi || 0) + '30',
-              }}
-            >
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="cloud" size={20} color={getAqiColor(aqiData?.aqi || 0)} />
-                <Text className="text-sm font-bold text-white/85 ml-2">空气质量</Text>
-              </View>
-              <Text 
-                className="text-3xl font-bold"
-                style={{ color: getAqiColor(aqiData?.aqi || 0) }}
-              >
-                {aqiData?.aqi || '--'}
-              </Text>
-              <Text 
-                className="text-sm font-medium mt-1"
-                style={{ color: getAqiColor(aqiData?.aqi || 0) }}
-              >
-                {aqiData?.category || '--'}
-              </Text>
-              <Text className="text-xs mt-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                首要污染物：{aqiData?.primaryPollutant || '--'}
-              </Text>
-            </View>
-
-            {/* 紫外线卡片 */}
-            <View 
-              className="flex-1 rounded-2xl p-4 ml-2"
-              style={{ 
-                backgroundColor: getUvColor(uvData?.uvIndex || 0) + '15',
-                borderWidth: 1,
-                borderColor: getUvColor(uvData?.uvIndex || 0) + '30',
-              }}
-            >
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="sunny-outline" size={20} color={getUvColor(uvData?.uvIndex || 0)} />
-                <Text className="text-sm font-bold text-white/85 ml-2">紫外线</Text>
-              </View>
-              <Text 
-                className="text-3xl font-bold"
-                style={{ color: getUvColor(uvData?.uvIndex || 0) }}
-              >
-                {uvData?.uvIndex || '--'}
-              </Text>
-              <Text 
-                className="text-sm font-medium mt-1"
-                style={{ color: getUvColor(uvData?.uvIndex || 0) }}
-              >
-                {uvData?.level || '--'}
-              </Text>
-              <Text className="text-xs mt-2" style={{ color: 'rgba(255,255,255,0.4)' }} numberOfLines={2}>
-                {uvData?.advice || '--'}
-              </Text>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {/* 7 天预报列表 - 深色主题 */}
-      <View className="px-4 py-6">
-        <Text className="text-lg font-bold text-white/85 mb-4">7 天预报</Text>
-        
-        {forecastData.length > 0 ? forecastData.map((item, index) => {
-          const isSelected = selectedDay === index;
-          const rainColor = getProbabilityColor(item.rain);
-          
-          return (
-            <TouchableOpacity
-              key={index}
-              onPress={() => setSelectedDay(index)}
-              activeOpacity={0.7}
-              className="p-4 mb-3 rounded-2xl"
-              style={{
-                backgroundColor: isSelected ? 'rgba(218,165,32,0.12)' : 'rgba(255,255,255,0.05)',
-                borderWidth: isSelected ? 1.5 : 1,
-                borderColor: isSelected ? 'rgba(218,165,32,0.3)' : 'rgba(255,255,255,0.06)',
-                shadowColor: isSelected ? '#DAA520' : 'transparent',
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: isSelected ? 0.2 : 0,
-                shadowRadius: 8,
-                elevation: isSelected ? 8 : 0,
-              }}
-            >
-              {/* 日期 */}
-              <View style={{ width: 80 }}>
-                <Text className="text-base font-bold" style={{ color: isSelected ? '#E8C547' : 'rgba(255,255,255,0.85)' }}>
-                  {item.day}
-                </Text>
-                <Text className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>{item.date}</Text>
-              </View>
-
-              {/* 天气状况 */}
-              <View className="flex-row items-center flex-1">
-                <Ionicons 
-                  name={getWeatherIcon(item.condition)} 
-                  size={32} 
-                  color={isSelected ? '#FDB813' : 'rgba(253,184,19,0.8)'} 
-                />
-                <Text className="ml-3 text-base" style={{ color: isSelected ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)' }}>{item.condition}</Text>
-              </View>
-
-              {/* 温度 */}
-              <View style={{ width: 96 }} className="items-center">
-                <Text className="text-lg font-bold" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                  {item.high}° / {item.low}°
-                </Text>
-              </View>
-
-              {/* 降水概率 */}
-              <View 
-                className="px-3 py-1 rounded-full"
-                style={{ backgroundColor: rainColor + '20' }}
-              >
-                <Text 
-                  className="text-sm font-medium"
-                  style={{ color: rainColor }}
-                >
-                  {item.rain}%
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        }) : (
-          <View className="items-center py-8">
-            <ActivityIndicator size="large" color="#DAA520" />
-            <Text className="text-white/50 mt-2">加载预报数据...</Text>
-          </View>
-        )}
-      </View>
-
-      {/* 选中日期详情 - 深色主题 */}
-      {forecastData.length > 0 && (
-      <View className="px-4 py-6">
-        <Text className="text-lg font-bold text-white/85 mb-4">
-          {forecastData[safeSelectedDay].day}详情
-        </Text>
-        
-        <View className="rounded-2xl p-5" style={{
-          backgroundColor: 'rgba(15,13,30,0.92)',
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.06)',
-        }}>
-          <View className="flex-row justify-between mb-4">
-            <View className="items-center">
-              <View className="w-11 h-11 rounded-full items-center justify-center mb-2" style={{ backgroundColor: 'rgba(255,107,53,0.12)' }}>
-                <Ionicons name="thermometer" size={24} color="#FF6B35" />
-              </View>
-              <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>体感温度</Text>
-              <Text className="text-lg font-bold text-white">
-                {Math.round((forecastData[safeSelectedDay].high + forecastData[safeSelectedDay].low) / 2)}°
-              </Text>
-            </View>
-            
-            <View className="items-center">
-              <View className="w-11 h-11 rounded-full items-center justify-center mb-2" style={{ backgroundColor: 'rgba(75,85,99,0.12)' }}>
-                <Ionicons name="water" size={24} color="#4B5563" />
-              </View>
-              <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>湿度</Text>
-              <Text className="text-lg font-bold text-white">65%</Text>
-            </View>
-            
-            <View className="items-center">
-              <View className="w-11 h-11 rounded-full items-center justify-center mb-2" style={{ backgroundColor: 'rgba(14,165,233,0.12)' }}>
-                <Ionicons name="wind" size={24} color="#0EA5E9" />
-              </View>
-              <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>风速</Text>
-              <Text className="text-lg font-bold text-white">{forecastData[safeSelectedDay].wind}</Text>
-            </View>
-            
-            <View className="items-center">
-              <View className="w-11 h-11 rounded-full items-center justify-center mb-2" style={{ backgroundColor: 'rgba(16,185,129,0.12)' }}>
-                <Ionicons name="eye" size={24} color="#10B981" />
-              </View>
-              <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>能见度</Text>
-              <Text className="text-lg font-bold text-white">15km</Text>
-            </View>
-          </View>
-
-          {/* 生活指数 */}
-          <View className="pt-4" style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' }}>
-            <Text className="text-sm font-bold text-white/85 mb-3">💡 生活指数</Text>
-            <View className="flex-row flex-wrap">
-              <View className="w-1/2 mb-3">
-                <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>穿衣指数</Text>
-                <Text className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>舒适，建议穿薄外套</Text>
-              </View>
-              <View className="w-1/2 mb-3">
-                <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>紫外线指数</Text>
-                <Text className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>{uvData?.advice || '中等，注意防晒'}</Text>
-              </View>
-              <View className="w-1/2 mb-3">
-                <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>运动指数</Text>
-                <Text className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>适宜户外运动</Text>
-              </View>
-              <View className="w-1/2 mb-3">
-                <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>洗车指数</Text>
-                <Text className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>较适宜</Text>
-              </View>
-            </View>
+          <View style={{ width: '48%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 10 }}>
+            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>风速</Text>
+            <Text style={{ fontSize: 20, fontWeight: '600', color: '#fff' }}>
+              {nowWeather?.windScale || '--'}级
+            </Text>
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+              {nowWeather?.windDir || '--'}
+            </Text>
           </View>
         </View>
       </View>
-      )}
 
-      {/* 底部提示 - 深色主题 */}
-      <View className="px-4 py-6">
-        <View className="rounded-2xl p-4" style={{
-          backgroundColor: 'rgba(59,130,246,0.1)',
-          borderWidth: 1,
-          borderColor: 'rgba(59,130,246,0.2)',
-        }}>
-          <View className="flex-row items-start">
-            <Ionicons name="information-circle" size={24} color="#3B82F6" />
-            <View className="ml-3 flex-1">
-              <Text className="text-sm font-bold text-blue-300">预报说明</Text>
-              <Text className="text-xs mt-1" style={{ color: 'rgba(59,130,246,0.7)' }}>
-                • 数据每 30 分钟更新一次
-              </Text>
-              <Text className="text-xs mt-1" style={{ color: 'rgba(59,130,246,0.7)' }}>
-                • 降水概率表示该地区有此概率出现降水
-              </Text>
-              <Text className="text-xs mt-1" style={{ color: 'rgba(59,130,246,0.7)' }}>
-                • 天文数据基于地理位置计算
-              </Text>
-            </View>
-          </View>
-        </View>
-      </View>
+      {/* 底部留白 */}
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
+
+// ─── 样式表 ─────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  weatherBanner: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+    marginTop: Spacing.sm,
+    backgroundColor: Surface.Surface1,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: whiteAlpha(0.06),
+  },
+  glassCard: {
+    backgroundColor: 'rgba(18, 24, 42, 0.75)',
+    borderRadius: Radius.lg,
+    borderWidth: 0.5,
+    borderColor: whiteAlpha(0.06),
+    padding: Spacing.lg,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: FontSize.h2,
+    fontWeight: FontWeight.semiBold,
+    color: TextColor.Primary,
+    marginBottom: Spacing.sm,
+  },
+  dayDetailRow: {
+    borderBottomWidth: 0.5,
+    borderBottomColor: whiteAlpha(0.06),
+    paddingVertical: Spacing.sm,
+    gap: 4,
+  },
+  tempCurveContainer: { height: 60, marginVertical: Spacing.sm, position: 'relative' },
+  tempCurveDotHigh: { width: 8, height: 8, borderRadius: 4, backgroundColor: Brand.Gold, position: 'absolute' },
+  tempCurveDotLow: { width: 8, height: 8, borderRadius: 4, backgroundColor: Accent.FrostCyan, position: 'absolute' },
+  dayCard: {
+    backgroundColor: Surface.Surface2, borderRadius: Radius.md, padding: Spacing.md,
+    marginRight: Spacing.sm, minWidth: 80, alignItems: 'center',
+    borderWidth: 1, borderColor: whiteAlpha(0.05),
+  },
+  dayCardActive: { borderColor: Brand.Gold, transform: [{ scale: 1.05 }] },
+  dayCardEmoji: { fontSize: 24, marginVertical: 4 },
+  dayCardName: { fontSize: FontSize.micro, color: TextColor.Tertiary, fontWeight: FontWeight.medium },
+  dayCardTempHi: { fontSize: FontSize.body, color: TextColor.Primary, fontWeight: FontWeight.semiBold },
+  dayCardTempLo: { fontSize: FontSize.caption, color: TextColor.Tertiary, marginTop: 1 },
+  dayCardTempBar: { width: '80%', height: 3, backgroundColor: whiteAlpha(0.1), borderRadius: 1.5, marginTop: 4, overflow: 'hidden' },
+  dayCardTempFill: { height: 3, backgroundColor: Brand.Gold, borderRadius: 1.5, position: 'absolute', top: 0 },
+  envItem: { width: '48%', backgroundColor: Surface.Surface2, borderRadius: Radius.md, padding: Spacing.md },
+  envItemLabel: { fontSize: FontSize.caption, color: TextColor.Tertiary },
+  envItemValue: { fontSize: FontSize.h2, fontWeight: FontWeight.semiBold, color: TextColor.Primary },
+  envItemSub: { fontSize: FontSize.micro, color: TextColor.Tertiary },
+});

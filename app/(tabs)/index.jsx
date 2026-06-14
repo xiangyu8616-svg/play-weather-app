@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import qweatherService from '../../services/qweatherService';
+import qweatherService from '../../services/weather/qweatherService';
 import { getPhotographyTimes, formatTime } from '../../services/astronomyService';
 import { Brand, Accent, Surface, TextColor, Spacing, Radius, FontSize, FontWeight, goldAlpha, whiteAlpha } from '../../styles/designTokens';
 import WeatherCard from '../../components/WeatherCard';

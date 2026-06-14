@@ -11,19 +11,19 @@
  * } from './services';
  */
 
-export { default as weatherService } from './weatherService';
-export { default as auroraService } from './auroraService';
-export { default as astronomyService } from './astronomyService';
-export { default as phenomenonService } from './phenomenonService';
-export * as cache from './cache';
-export { default as qweatherService } from './qweatherService';
+export { default as weatherService } from './weather/weatherService.ts';
+export { default as auroraService } from './auroraService.ts';
+export { default as astronomyService } from './astronomyService.ts';
+export { default as phenomenonService } from './phenomenonService.ts';
+export * as cache from './cache.ts';
+export { default as qweatherService } from './weather/qweatherService.js';
 
 // 重新导出常用类型
 export type {
   RealTimeWeather,
   DailyForecast,
   Location
-} from './weatherService';
+} from './weather/weatherService.ts';
 
 export type {
   KPIndex,
