@@ -1,34 +1,101 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Animated, Dimensions, TextInput, FlatList, ActivityIndicator } from 'react-native';
+import {
+  View, Text, TouchableOpacity, ScrollView, StyleSheet,
+  TextInput, FlatList, useWindowDimensions,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { hexToRgb } from '../../utils/colors';
-import qweatherService from '../../services/qweatherService';
-import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import GlobeControls from '../../components/globe/GlobeControls';
-import WeatherCard from '../../components/weather/WeatherCard';
-import FadeInView from '../../components/animations/FadeInView';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const { width } = Dimensions.get('window');
+import qweatherService from '../../services/qweatherService';
+import { getPhotographyTimes, formatTime } from '../../services/astronomyService';
+import { Brand, Accent, Surface, TextColor, Spacing, Radius, FontSize, FontWeight, goldAlpha, whiteAlpha } from '../../styles/designTokens';
+import WeatherCard from '../../components/WeatherCard';
+import PhotoTimingPanel from '../../components/PhotoTimingPanel';
 
-// Metro 自动选择：Web 平台用 GlobeView.web.jsx，Native 用 GlobeView.optimized.jsx
-import GlobeView from '../../components/globe/GlobeView';
+// ==================== 辅助函数 ====================
+
+function getWeatherEmoji(text) {
+  if (!text) return '🌤';
+  const lower = text.toLowerCase();
+  if (lower.includes('晴')) return '☀️';
+  if (lower.includes('多云')) return '⛅';
+  if (lower.includes('阴')) return '☁️';
+  if (lower.includes('雨')) return '🌧';
+  if (lower.includes('雪')) return '❄️';
+  if (lower.includes('雾')) return '🌫';
+  return '🌤';
+}
 
 /**
- * 首页 - 毛玻璃深色主题
- * 设计语言：深色星空背景 + 半透明玻璃态卡片 + 金色光晕
+ * 根据天气状况代码返回动态渐变背景色
  */
-export default function HomeScreen() {
-  // 原有状态
-  const [selectedDay, setSelectedDay] = useState(1);
-  const [selectedPhenomenon, setSelectedPhenomenon] = useState('all');
-  const [showGlobeDetail, setShowGlobeDetail] = useState(false);
-  const [isRotating, setIsRotating] = useState(true);
-  const [selectedPointData, setSelectedPointData] = useState(null);
-  const [showTyphoonPanel, setShowTyphoonPanel] = useState(false);
-  const scrollY = useRef(new Animated.Value(0)).current;
+function getWeatherBackground(text, code) {
+  const c = parseInt(code) || 0;
+  const t = (text || '').toLowerCase();
 
-  // 新增：搜索和天气状态
+  if (c === 100 || t.includes('晴')) return ['#1a1a2e', '#16213e', '#e2725b'];
+  if (c >= 101 && c <= 104) return ['#2c3e50', '#34495e', '#5d6d7e'];
+  if (c >= 150 && c <= 154) return ['#2d3436', '#434a54', '#656d78'];
+  if (c >= 319 && c <= 399) return ['#0a1620', '#14293a', '#1e4d5a'];
+  if (c >= 300 && c <= 318 || t.includes('雨')) return ['#0c2027', '#1a3a47', '#2c5f6b'];
+  if (c >= 400 && c <= 499 || t.includes('雪')) return ['#1e3c58', '#2b5a80', '#87aec8'];
+  if (c >= 500 && c <= 515 || t.includes('雾') || t.includes('霾')) return ['#3a3a4a', '#505060', '#6a6a7a'];
+  return ['#1a1a2e', '#16213e', '#0f3460'];
+}
+
+function generateMockHourly(nowWeather, dailyForecast) {
+  const baseTemp = parseInt(nowWeather?.temp) || 25;
+  const conditions = [nowWeather?.text || '晴'];
+  if (dailyForecast?.[0]?.textDay) conditions.push(dailyForecast[0].textDay);
+
+  const hourly = [];
+  const now = new Date();
+  for (let i = 0; i < 24; i++) {
+    const d = new Date(now.getTime() + i * 3600000);
+    const hour = d.getHours();
+    const offset = Math.sin(((hour - 5) / 24) * Math.PI * 2) * 4;
+    hourly.push({
+      hour: hour,
+      temp: Math.round(baseTemp + offset),
+      text: conditions[Math.floor(Math.random() * conditions.length)],
+    });
+  }
+  return hourly;
+}
+
+function generateMockAqi() {
+  const aqi = Math.floor(Math.random() * 80 + 20);
+  let category = '优';
+  if (aqi > 50) category = '良';
+  if (aqi > 100) category = '轻度污染';
+  if (aqi > 150) category = '中度污染';
+  return { aqi, category, primary: 'PM2.5' };
+}
+
+function calcPhotoScore(cloud, vis) {
+  const c = parseInt(cloud) || 50;
+  const v = parseInt(vis) || 10;
+  const cloudScore = c >= 20 && c <= 60 ? 30 : c < 20 ? 15 : 10;
+  const visScore = Math.min(v * 2, 40);
+  const hour = new Date().getHours();
+  const timeScore = (hour >= 5 && hour <= 8) || (hour >= 16 && hour <= 19) ? 30 : 10;
+  return Math.min(cloudScore + visScore + timeScore, 100);
+}
+
+function formatCountdown(ms) {
+  if (ms <= 0) return '进行中';
+  const totalMin = Math.round(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+// ==================== 页面组件 ====================
+
+export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
@@ -36,22 +103,41 @@ export default function HomeScreen() {
   const [currentCity, setCurrentCity] = useState({ name: '北京', id: '101010100' });
   const [nowWeather, setNowWeather] = useState(null);
   const [dailyForecast, setDailyForecast] = useState([]);
+  const [loadError, setLoadError] = useState(false);
   const searchInputRef = useRef(null);
+  const { width: screenWidth } = useWindowDimensions();
+  const responsiveTempSize = Math.min(72, screenWidth * 0.18);
 
-  // 光晕脉动动画
-  const haloOpacity1 = useRef(new Animated.Value(0.3)).current;
-  const haloRadius1 = useRef(new Animated.Value(60)).current;
-  const haloOpacity2 = useRef(new Animated.Value(0.4)).current;
-  const haloRadius2 = useRef(new Animated.Value(70)).current;
+  const [hourlyForecast, setHourlyForecast] = useState([]);
+  const [aqiData, setAqiData] = useState(null);
+  const [astronomyData, setAstronomyData] = useState(null);
+  const [goldenCountdown, setGoldenCountdown] = useState('--');
 
-  // 加载天气数据
-  useEffect(() => {
-    loadWeatherData(currentCity.id);
-  }, []);
+  const cityCoords = useRef({ lat: 39.9042, lng: 116.4074 });
 
-  // 加载城市天气数据
+  const { minTemp, maxTemp } = useMemo(() => {
+    if (!dailyForecast || dailyForecast.length === 0) {
+      return { minTemp: 15, maxTemp: 35 };
+    }
+    const lows = dailyForecast.map(d => parseInt(d.tempMin) || 0);
+    const highs = dailyForecast.map(d => parseInt(d.tempMax) || 0);
+    return {
+      minTemp: Math.min(...lows),
+      maxTemp: Math.max(...highs),
+    };
+  }, [dailyForecast]);
+
+  const cloudCover = nowWeather?.cloud || '--';
+  const visibility = nowWeather?.vis || '--';
+
+  const photoScore = useMemo(() => {
+    if (!nowWeather) return null;
+    return calcPhotoScore(nowWeather.cloud, nowWeather.vis);
+  }, [nowWeather]);
+
   const loadWeatherData = async (locationId) => {
     try {
+      setLoadError(false);
       setIsLoading(true);
       const [weather, forecast] = await Promise.all([
         qweatherService.getNowWeather(locationId),
@@ -59,24 +145,75 @@ export default function HomeScreen() {
       ]);
       setNowWeather(weather);
       setDailyForecast(forecast);
+      setHourlyForecast(generateMockHourly(weather, forecast));
+      setAqiData(generateMockAqi());
     } catch (error) {
       console.error('加载天气数据失败:', error);
-      // 使用 Mock 数据
-      setNowWeather(qweatherService.generateMockNowWeather());
-      setDailyForecast(qweatherService.generateMockDailyForecast());
+      setLoadError(true);
+      const mockWeather = qweatherService.generateMockNowWeather();
+      const mockForecast = qweatherService.generateMockDailyForecast();
+      setNowWeather(mockWeather);
+      setDailyForecast(mockForecast);
+      setHourlyForecast(generateMockHourly(mockWeather, mockForecast));
+      setAqiData(generateMockAqi());
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 搜索城市
+  useEffect(() => {
+    try {
+      const { lat, lng } = cityCoords.current;
+      const photoTimes = getPhotographyTimes(new Date(), lat, lng);
+      const fmt = (d) => formatTime(d);
+      setAstronomyData({
+        goldenHour: {
+          start: fmt(photoTimes.goldenHourEvening.start),
+          end: fmt(photoTimes.goldenHourEvening.end),
+          startDate: photoTimes.goldenHourEvening.start,
+        },
+        blueHour: {
+          start: fmt(photoTimes.blueHourEvening.start),
+          end: fmt(photoTimes.blueHourEvening.end),
+        },
+      });
+    } catch (err) {
+      console.warn('天文数据计算失败，使用默认值:', err);
+      setAstronomyData({
+        goldenHour: { start: '17:30', end: '18:30', startDate: null },
+        blueHour: { start: '18:30', end: '19:00' },
+      });
+    }
+  }, [currentCity]);
+
+  useEffect(() => {
+    const tick = () => {
+      if (!astronomyData?.goldenHour?.startDate) {
+        setGoldenCountdown('--');
+        return;
+      }
+      try {
+        const ms = astronomyData.goldenHour.startDate.getTime() - Date.now();
+        setGoldenCountdown(formatCountdown(ms));
+      } catch {
+        setGoldenCountdown('--');
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 60000);
+    return () => clearInterval(interval);
+  }, [astronomyData]);
+
+  useEffect(() => {
+    loadWeatherData(currentCity.id);
+  }, []);
+
   const handleSearch = async (query) => {
     if (!query || query.trim().length === 0) {
       setSearchResults([]);
       setShowSearchResults(false);
       return;
     }
-
     try {
       setIsLoading(true);
       const cities = await qweatherService.searchCity(query, 5);
@@ -89,206 +226,72 @@ export default function HomeScreen() {
     }
   };
 
-  // 选择城市
   const handleSelectCity = (city) => {
     setCurrentCity(city);
     setShowSearchResults(false);
     setSearchQuery('');
+    if (city.lat && city.lon) {
+      cityCoords.current = { lat: parseFloat(city.lat), lng: parseFloat(city.lon) };
+    }
     loadWeatherData(city.id);
   };
 
-  // 光晕脉动动画
-  useEffect(() => {
-    const pulse1 = Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(haloOpacity1, { toValue: 0.6, duration: 2000, useNativeDriver: false }),
-          Animated.timing(haloRadius1, { toValue: 80, duration: 2000, useNativeDriver: false }),
-        ]),
-        Animated.parallel([
-          Animated.timing(haloOpacity1, { toValue: 0.3, duration: 2000, useNativeDriver: false }),
-          Animated.timing(haloRadius1, { toValue: 50, duration: 2000, useNativeDriver: false }),
-        ]),
-      ])
-    );
-    const pulse2 = Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(haloOpacity2, { toValue: 0.6, duration: 2000, duration: 2000, useNativeDriver: false }),
-          Animated.timing(haloRadius2, { toValue: 80, duration: 2000, useNativeDriver: false }),
-        ]),
-        Animated.parallel([
-          Animated.timing(haloOpacity2, { toValue: 0.4, duration: 2000, useNativeDriver: false }),
-          Animated.timing(haloRadius2, { toValue: 60, duration: 2000, useNativeDriver: false }),
-        ]),
-      ])
-    );
-    pulse1.start();
-    pulse2.start();
-  }, []);
-
-  // 天气自适应背景色和光晕色
-  const themeColors = useMemo(() => {
-    const themes = {
-      all: { from: '#0F0D1E', to: '#1a1030', glowColor: '#DAA520' },
-      aurora: { from: '#0D1B2A', to: '#1B0A3E', glowColor: '#00FF7F' },
-      typhoon: { from: '#1A0D0D', to: '#2D1B1B', glowColor: '#FF4444' },
-      cloud: { from: '#0D1420', to: '#1A2A3E', glowColor: '#87CEEB' },
-      glow: { from: '#1A100A', to: '#3D1F0A', glowColor: '#FFA500' },
-      snow: { from: '#0D1520', to: '#1A2535', glowColor: '#E8E8FF' },
-      rainbow: { from: '#100D1E', to: '#1A1530', glowColor: '#FF6B35' },
-    };
-    return themes[selectedPhenomenon] || themes.all;
-  }, [selectedPhenomenon]);
-
-  // 台风相关状态
-  const [typhoonList, setTyphoonList] = useState([]);
-  const [selectedTyphoon, setSelectedTyphoon] = useState(null);
-  const [typhoonTrack, setTyphoonTrack] = useState([]);
-
-  // 加载台风数据
-  useEffect(() => {
-    if (selectedPhenomenon === 'typhoon' || selectedPhenomenon === 'all') {
-      loadTyphoonData();
-    }
-  }, [selectedPhenomenon]);
-
-  const loadTyphoonData = async () => {
-    try {
-      const typhoons = await qweatherService.getTyphoonList('NP');
-      setTyphoonList(typhoons);
-      if (typhoons.length > 0) {
-        setSelectedTyphoon(typhoons[0]);
-        const track = await qweatherService.getTyphoonTrack(typhoons[0].stormId);
-        setTyphoonTrack(track);
-      }
-    } catch (error) {
-      console.error('加载台风数据失败:', error);
-    }
-  };
-
-  const handleDayChange = (day) => setSelectedDay(day);
-  const handlePhenomenonChange = async (p) => {
-    setSelectedPhenomenon(p);
-    setShowTyphoonPanel(p === 'typhoon' || p === 'all');
-    if (p === 'typhoon') {
-      await loadTyphoonData();
-    }
-  };
-  const handleRotateToggle = () => setIsRotating(!isRotating);
-  const handleGlobePress = () => setShowGlobeDetail(true);
-  const handlePointData = (data) => { setSelectedPointData(data); setShowGlobeDetail(true); };
+  const bgColors = useMemo(
+    () => getWeatherBackground(nowWeather?.text, nowWeather?.code),
+    [nowWeather?.text, nowWeather?.code],
+  );
 
   return (
-    <View className="flex-1" style={{
-      backgroundImage: `linear-gradient(to bottom, ${themeColors.from}, ${themeColors.to})`,
-    }}>
+    <LinearGradient colors={bgColors} style={{ flex: 1 }} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
       <StatusBar style="light" />
-
-      {/* ===== 背景光晕装饰（带脉动动画） ===== */}
-      <Animated.View className="absolute top-0 right-0 w-48 h-48 opacity-40" style={{
-        backgroundColor: 'transparent',
-        shadowColor: themeColors.glowColor,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: haloOpacity1,
-        shadowRadius: haloRadius1,
-        elevation: 40,
-      }} />
-      <Animated.View className="absolute bottom-1/3 left-0 w-40 h-40 opacity-30" style={{
-        backgroundColor: 'transparent',
-        shadowColor: themeColors.glowColor,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: haloOpacity2,
-        shadowRadius: haloRadius2,
-        elevation: 30,
-      }} />
-
-      <SafeAreaView className="flex-1" edges={['top']}>
-        {/* ===== 顶部栏 ===== */}
-        <View className="px-5 pt-3 pb-2 flex-row items-center justify-between">
-          <View>
-            <Text className="text-white text-xl font-bold tracking-wide">玩天气</Text>
-            <Text className="text-glass-text-dim text-xs mt-0.5">全球天气现象预报</Text>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* 加载状态 */}
+        {isLoading && !nowWeather && (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 120 }}>
+            <Text style={{ fontSize: 36 }}>⏳</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.5)', marginTop: 12, fontSize: 14 }}>加载天气数据...</Text>
           </View>
-          <TouchableOpacity 
-            className="w-10 h-10 rounded-full items-center justify-center"
-            style={{ backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
-          >
-            <Ionicons name="notifications-outline" size={20} color="rgba(255,255,255,0.7)" />
-          </TouchableOpacity>
-        </View>
-
-        {/* ===== 玻璃态搜索栏（带边缘光） ===== */}
-        <View className="px-5 py-3">
-          <View
-            className="flex-row items-center px-4 py-3.5 rounded-2xl"
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              borderWidth: 1,
-              borderColor: `rgba(${hexToRgb(themeColors.glowColor)}, 0.15)`,
-              shadowColor: themeColors.glowColor,
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 4,
-            }}
-          >
-            <Ionicons name="search" size={18} color="rgba(255,255,255,0.35)" />
-            <TextInput
-              ref={searchInputRef}
-              className="flex-1 ml-3 text-sm"
-              style={{ color: 'rgba(255,255,255,0.8)' }}
-              placeholder="搜索城市/景点/现象"
-              placeholderTextColor="rgba(255,255,255,0.35)"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onFocus={() => searchQuery.trim() && handleSearch(searchQuery)}
-              onSubmitEditing={() => handleSearch(searchQuery)}
-              returnKeyType="search"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {isLoading && (
-              <ActivityIndicator size="small" color="#DAA520" className="mr-2" />
-            )}
+        )}
+        {/* 错误状态 */}
+        {loadError && !isLoading && (
+          <View style={{ paddingTop: 60, alignItems: 'center' }}>
+            <Text style={{ fontSize: 36 }}>⚠️</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.7)', marginTop: 12, fontSize: 14, textAlign: 'center' }}>
+              天气数据加载失败
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 6 }}>
+              已使用本地缓存数据
+            </Text>
             <TouchableOpacity
-              onPress={() => handleSelectCity(currentCity)}
-              className="w-8 h-8 rounded-full items-center justify-center"
-              style={{ backgroundColor: 'rgba(218,165,32,0.15)' }}
+              onPress={() => loadWeatherData(currentCity.id)}
+              style={{
+                marginTop: 16, backgroundColor: 'rgba(218,165,32,0.15)', borderWidth: 1,
+                borderColor: 'rgba(218,165,32,0.3)', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 10,
+              }}
+              activeOpacity={0.7}
             >
-              <Ionicons name="location" size={16} color="#DAA520" />
+              <Text style={{ color: '#DAA520', fontSize: 14, fontWeight: '600' }}>重试</Text>
             </TouchableOpacity>
           </View>
+        )}
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
 
-          {/* 搜索结果显示 */}
+          {/* 搜索栏覆盖层 */}
           {showSearchResults && searchResults.length > 0 && (
-            <View className="absolute top-20 left-5 right-5 rounded-2xl overflow-hidden"
-              style={{
-                backgroundColor: 'rgba(15,13,30,0.98)',
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.1)',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 12,
-                elevation: 10,
-                maxHeight: 300,
-              }}
-            >
+            <View style={styles.searchOverlay}>
               <FlatList
                 data={searchResults}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    className="flex-row items-center px-4 py-3"
-                    style={{ borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.05)' }}
+                    style={styles.searchResultRow}
                     onPress={() => handleSelectCity(item)}
                     activeOpacity={0.7}
                   >
                     <Ionicons name="location-outline" size={18} color="rgba(255,255,255,0.5)" />
-                    <View className="ml-3 flex-1">
-                      <Text className="text-white text-sm font-medium">{item.name}</Text>
-                      <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    <View style={{ marginLeft: 12, flex: 1 }}>
+                      <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{item.name}</Text>
+                      <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
                         {item.adm1} {item.adm2}
                       </Text>
                     </View>
@@ -297,227 +300,196 @@ export default function HomeScreen() {
               />
             </View>
           )}
-        </View>
 
-        {/* ===== 地球仪区域 ===== */}
-        <View className="flex-1 min-h-[280px]">
-          {GlobeView ? (
-            <GlobeView
-              selectedDay={selectedDay}
-              selectedPhenomenon={selectedPhenomenon}
-              onGlobePress={handleGlobePress}
-              onPointData={handlePointData}
-            />
-          ) : (
-            /* Web 平台：玻璃态地球仪占位 */
-            <View className="flex-1 items-center justify-center">
-              <View className="relative">
-                {/* 外层光晕 */}
-                <View className="absolute -inset-8 rounded-full opacity-30" style={{
-                  backgroundColor: 'transparent',
-                  shadowColor: '#DAA520',
-                  shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.5,
-                  shadowRadius: 60,
-                  elevation: 30,
-                }} />
-                {/* 地球仪圆 */}
-                <View className="w-48 h-48 rounded-full items-center justify-center"
-                  style={{
-                    borderWidth: 2,
-                    borderColor: 'rgba(218,165,32,0.2)',
-                    backgroundImage: 'radial-gradient(circle at 40% 40%, rgba(218,165,32,0.25), rgba(100,60,0,0.08))',
-                    shadowColor: '#DAA520',
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 50,
-                    elevation: 20,
-                  }}
-                >
-                  <Text className="text-6xl">🌍</Text>
-                </View>
-              </View>
-              <Text className="text-white text-base font-semibold mt-6 opacity-80">3D 地球仪</Text>
-              <Text className="text-white text-xs mt-1 opacity-40">手机端查看完整 3D 效果</Text>
-            </View>
-          )}
-
-          {/* 浮动天气卡片 */}
-          {showGlobeDetail && (
-            <View className="absolute top-4 right-4 left-4 z-10">
-              <WeatherCard
-                location={selectedPointData?.name || nowWeather?.text || "梅里雪山·飞来寺"}
-                probability={selectedPointData?.size ? Math.round(selectedPointData.size * 100) : 85}
-                level={selectedPointData?.intensity || "史诗级"}
-                sunrise="07:23"
-                onClose={() => setShowGlobeDetail(false)}
+          {/* 1. 顶部导航 */}
+          <View style={styles.topNav}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TextInput
+                ref={searchInputRef}
+                style={styles.searchInput}
+                placeholder="搜索城市"
+                placeholderTextColor="rgba(255,255,255,0.35)"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onFocus={() => searchQuery.trim() && handleSearch(searchQuery)}
+                onSubmitEditing={() => handleSearch(searchQuery)}
+                returnKeyType="search"
+                autoCapitalize="none"
+                autoCorrect={false}
               />
+              <Text style={{ fontSize: 15, color: '#fff', fontWeight: '400' }}>
+                {currentCity?.name || '北京'}
+              </Text>
             </View>
-          )}
-
-          {/* 实时天气卡片 */}
-          {nowWeather && !showGlobeDetail && (
-            <View className="absolute top-4 right-4 left-4 z-10">
-              <View className="rounded-2xl p-4"
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.08)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.1)',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 12,
-                  elevation: 10,
-                }}
-              >
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-1">
-                    <View className="flex-row items-center">
-                      <Ionicons name="location" size={14} color="rgba(255,255,255,0.5)" />
-                      <Text className="text-white text-sm font-medium ml-1">{currentCity.name}</Text>
-                    </View>
-                    <Text className="text-white text-3xl font-bold mt-2">{nowWeather.temp}°</Text>
-                    <Text className="text-white text-sm mt-1" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                      {nowWeather.text} · 体感{nowWeather.feelsLike}°
-                    </Text>
-                  </View>
-                  <View className="items-end">
-                    <Ionicons name="partly-sunny" size={48} color="#DAA520" />
-                    <Text className="text-xs mt-2" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                      {nowWeather.windDir} {nowWeather.windScale}级
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* ===== 底部控制面板（带淡入动画） ===== */}
-        <FadeInView delay={100} duration={500}>
-          <GlobeControls
-            selectedDay={selectedDay}
-            selectedPhenomenon={selectedPhenomenon}
-            onDayChange={handleDayChange}
-            onPhenomenonChange={handlePhenomenonChange}
-            onRotateToggle={handleRotateToggle}
-            isRotating={isRotating}
-          />
-        </FadeInView>
-
-        {/* ===== 台风面板（带淡入动画） ===== */}
-        {showTyphoonPanel && selectedPhenomenon === 'typhoon' && (
-          <FadeInView delay={150} duration={500}>
-          <View className="absolute bottom-0 left-4 right-4 rounded-t-3xl p-5 pb-8"
-            style={{
-              backgroundColor: 'rgba(15,13,30,0.95)',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.08)',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: -4 },
-              shadowOpacity: 0.5,
-              shadowRadius: 20,
-              elevation: 20,
-            }}
-          >
-            <View className="flex-row items-center justify-between mb-4">
-              <View className="flex-row items-center">
-                <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(255,0,0,0.15)' }}>
-                  <Text className="text-xl">🌀</Text>
-                </View>
-                <View className="ml-3">
-                  <Text className="text-white text-base font-bold">台风路径</Text>
-                  <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>实时追踪 • 预报路径</Text>
-                </View>
-              </View>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
               <TouchableOpacity
-                onPress={() => setShowTyphoonPanel(false)}
-                className="w-8 h-8 rounded-full items-center justify-center"
-                style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
+                onPress={() => searchInputRef.current?.focus()}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={{ padding: 8, minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' }}
               >
-                <Ionicons name="close" size={18} color="rgba(255,255,255,0.5)" />
+                <Text style={{ fontSize: 16, color: '#fff', opacity: 0.7 }}>🔍</Text>
               </TouchableOpacity>
+              <Text style={{ fontSize: 16, color: '#fff', opacity: 0.7 }}>•••</Text>
             </View>
-
-            {/* 强度图例 */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-              {[
-                { color: '#6B7280', label: '热带低压' },
-                { color: '#3B82F6', label: '热带风暴' },
-                { color: '#22C55E', label: '强热带风暴' },
-                { color: '#EAB308', label: '台风' },
-                { color: '#EF4444', label: '强台风' },
-              ].map((item) => (
-                <View key={item.label} className="flex-row items-center mr-4">
-                  <View className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                  <Text className="ml-1.5 text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>{item.label}</Text>
-                </View>
-              ))}
-            </ScrollView>
-
-            {/* 台风列表选择 */}
-            {typhoonList.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-                {typhoonList.map((typhoon) => (
-                  <TouchableOpacity
-                    key={typhoon.stormId}
-                    className="px-4 py-2 mr-2 rounded-full"
-                    style={{
-                      backgroundColor: selectedTyphoon?.stormId === typhoon.stormId ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.05)',
-                      borderWidth: 1,
-                      borderColor: selectedTyphoon?.stormId === typhoon.stormId ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.1)',
-                    }}
-                    onPress={async () => {
-                      setSelectedTyphoon(typhoon);
-                      const track = await qweatherService.getTyphoonTrack(typhoon.stormId);
-                      setTyphoonTrack(track);
-                    }}
-                  >
-                    <Text className="text-sm font-medium" style={{ color: selectedTyphoon?.stormId === typhoon.stormId ? '#EF4444' : 'rgba(255,255,255,0.6)' }}>
-                      {typhoon.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-
-            {/* 当前台风信息 */}
-            {selectedTyphoon && typhoonTrack.length > 0 ? (
-              <>
-                <View className="rounded-2xl p-4 mb-3" style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.15)' }}>
-                  <View className="flex-row justify-between">
-                    <View>
-                      <Text className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>当前位置</Text>
-                      <Text className="text-sm font-bold text-white">
-                        {typhoonTrack[typhoonTrack.length - 1]?.lat}°N, {typhoonTrack[typhoonTrack.length - 1]?.lon}°E
-                      </Text>
-                    </View>
-                    <View className="items-end">
-                      <Text className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>强度等级</Text>
-                      <Text className="text-sm font-bold text-red-400">{selectedTyphoon.name} ({selectedTyphoon.maxWindSpeed}m/s)</Text>
-                    </View>
-                  </View>
-                </View>
-                
-                {/* 路径点数 */}
-                <View className="flex-row items-center justify-between px-1">
-                  <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    路径点：{typhoonTrack.length} 个
-                  </Text>
-                  <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    最低气压：{selectedTyphoon.minPressure}hPa
-                  </Text>
-                </View>
-              </>
-            ) : (
-              <View className="rounded-2xl p-4 items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                <Text className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>暂无台风数据</Text>
-              </View>
-            )}
           </View>
-          </FadeInView>
-        )}
+
+          {/* 2. 实时天气卡片 */}
+          <WeatherCard
+            nowWeather={nowWeather}
+            dailyForecast={dailyForecast}
+            hourlyForecast={hourlyForecast}
+            aqiData={aqiData}
+            responsiveTempSize={responsiveTempSize}
+            cloudCover={cloudCover}
+            visibility={visibility}
+          />
+
+          {/* 3. 摄影时机面板 */}
+          <PhotoTimingPanel
+            photoScore={photoScore}
+            cloudCover={cloudCover}
+            visibility={visibility}
+            nowWeather={nowWeather}
+            astronomyData={astronomyData}
+            goldenCountdown={goldenCountdown}
+          />
+
+          {/* 4. 7日预报 — 玻璃卡片 */}
+          <View style={styles.glassCard}>
+            <Text style={styles.sectionTitle}>7天预报</Text>
+            {(dailyForecast || []).slice(0, 7).map((day, i) => {
+              const low = parseInt(day.tempMin) || 0;
+              const high = parseInt(day.tempMax) || 0;
+              const range = maxTemp - minTemp || 1;
+              return (
+                <View key={i} style={[styles.dayRow, i === 6 && { borderBottomWidth: 0 }]}>
+                  <Text style={styles.dayLabel}>
+                    {day.day || (day.fxDate ? day.fxDate.slice(5) : '--')}
+                  </Text>
+                  <Text style={{ width: 28, fontSize: 18, textAlign: 'center' }}>
+                    {getWeatherEmoji(day.textDay || day.text)}
+                  </Text>
+                  <View style={styles.dayTempBar}>
+                    <View style={[styles.dayTempFill, {
+                      left: `${((low - minTemp) / range) * 100}%`,
+                      width: `${((high - low) / range) * 100}%`,
+                    }]} />
+                  </View>
+                  <Text style={styles.dayTempHi}>{Math.round(high)}°</Text>
+                  <Text style={styles.dayTempLo}>{Math.round(low)}°</Text>
+                </View>
+              );
+            })}
+          </View>
+
+        </ScrollView>
       </SafeAreaView>
-    </View>
+    </LinearGradient>
   );
 }
+
+// ==================== 样式表 ====================
+
+const styles = StyleSheet.create({
+  glassCard: {
+    backgroundColor: 'rgba(18, 24, 42, 0.75)',
+    borderRadius: Radius.lg,
+    borderWidth: 0.5,
+    borderColor: whiteAlpha(0.06),
+    padding: Spacing.lg,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: FontSize.h2,
+    fontWeight: FontWeight.semiBold,
+    color: TextColor.Primary,
+    marginBottom: Spacing.sm,
+  },
+
+  topNav: {
+    height: 56,
+    paddingHorizontal: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  searchInput: {
+    fontSize: FontSize.body,
+    color: TextColor.Primary,
+    backgroundColor: Surface.Surface2,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    minWidth: 120,
+    height: 36,
+    borderWidth: 1,
+    borderColor: whiteAlpha(0.1),
+  },
+  searchOverlay: {
+    position: 'absolute',
+    top: 56,
+    left: Spacing.lg,
+    right: Spacing.lg,
+    zIndex: 100,
+    backgroundColor: Surface.Surface1,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: whiteAlpha(0.1),
+    maxHeight: 300,
+    overflow: 'hidden',
+  },
+  searchResultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 0.5,
+    borderBottomColor: whiteAlpha(0.05),
+  },
+
+  dayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 40,
+    borderBottomWidth: 0.5,
+    borderBottomColor: whiteAlpha(0.06),
+    gap: Spacing.sm,
+    paddingVertical: 4,
+  },
+  dayLabel: {
+    width: 40,
+    fontSize: FontSize.caption,
+    color: TextColor.Primary,
+    fontWeight: FontWeight.regular,
+  },
+  dayTempBar: {
+    flex: 1,
+    height: 4,
+    backgroundColor: whiteAlpha(0.1),
+    borderRadius: 2,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  dayTempFill: {
+    position: 'absolute',
+    top: 0,
+    height: 4,
+    backgroundColor: Brand.Gold,
+    borderRadius: 2,
+  },
+  dayTempHi: {
+    width: 30,
+    fontSize: FontSize.caption,
+    color: TextColor.Primary,
+    textAlign: 'right',
+    fontWeight: FontWeight.regular,
+  },
+  dayTempLo: {
+    width: 30,
+    fontSize: FontSize.caption,
+    color: TextColor.Tertiary,
+    textAlign: 'right',
+    fontWeight: FontWeight.regular,
+  },
+});
