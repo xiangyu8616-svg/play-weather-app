@@ -10,11 +10,10 @@
  * - 当前文件中用的是本地凭据，构建上线前请替换为线上凭据
  */
 
-// 和风天气 API Key（本地开发用，无域名限制）
-// 上线前请替换为已加白名单的线上凭据
-// 本地开发 + Vercel 生产都用 TNPKF2T39E（不限制访问来源）
-// TH59QRQ6EY（网站模式）仅限白名单域名，备用
-export const QWEATHER_KEY = '71bebee8452d4dab8ae88e50460f3bdf';
+// 和风天气 API Key 模式选择
+// 设为 'USE_BFF' → 通过 BFF 层代理（推荐，Key 不暴露给前端）
+// 设为实际 Key → 前端直连（仅本地开发调试用，上线必须改）
+export const QWEATHER_KEY = 'USE_BFF';
 
 // API 基础配置
 export const API_CONFIG = {

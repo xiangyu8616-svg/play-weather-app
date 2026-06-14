@@ -1,5 +1,7 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EarthIcon, PartlySunnyIcon, CameraIcon, PersonIcon } from '../../components/icons/TabIcons';
 
 /**
@@ -9,6 +11,9 @@ import { EarthIcon, PartlySunnyIcon, CameraIcon, PersonIcon } from '../../compon
  * for their heavy dependencies (images, third-party libs, etc.)
  */
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  const isIOS = Platform.OS === 'ios';
+
   return (
     <Tabs
       screenOptions={{
@@ -19,9 +24,9 @@ export default function TabsLayout() {
           backgroundColor: 'rgba(15,13,30,0.85)',
           borderTopWidth: 1,
           borderTopColor: 'rgba(218,165,32,0.12)',
-          paddingBottom: 6,
+          paddingBottom: isIOS ? 6 + insets.bottom : 6,
           paddingTop: 6,
-          height: 58,
+          height: isIOS ? 58 + insets.bottom : 58,
           position: 'absolute',
           bottom: 0,
           left: 0,

@@ -1,227 +1,318 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Switch, Animated } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Switch, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getProbabilityColor } from '../../utils/colors';
-import FadeInView from '../../components/animations/FadeInView';
+import { Ionicons } from '@expo/vector-icons';
+import { Brand, Accent, Surface, TextColor, Spacing, Radius, FontSize, FontWeight, goldAlpha, whiteAlpha, skyBlueAlpha } from '../../styles/designTokens';
+import { loadSettings, saveSettings } from '../../services/settingsService';
 
-/**
- * 个人中心页面 - 毛玻璃深色主题
- */
 export default function ProfileScreen() {
+  const [tempUnit, setTempUnit] = useState('°C');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [probabilityAlert, setProbabilityAlert] = useState(true);
   const [dailyForecast, setDailyForecast] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
-  const user = {
-    name: '追光者',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=user',
-    level: 'Lv.5 资深摄影师',
-    works: 12,
-    favorites: 8,
-    followers: 320,
-  };
-
-  const favoriteLocations = [
-    { name: '梅里雪山·飞来寺', probability: 85, level: '史诗级' },
-    { name: '贡嘎雪山·冷嘎措', probability: 62, level: '良好' },
-    { name: '南迦巴瓦峰·索松村', probability: 45, level: '一般' },
-  ];
-
-  // 光晕脉动
-  const haloOpacity = useRef(new Animated.Value(0.3)).current;
-  const haloRadius = useRef(new Animated.Value(60)).current;
+  // 启动时加载设置
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.parallel([
-        Animated.sequence([
-          Animated.timing(haloOpacity, { toValue: 0.55, duration: 2000, useNativeDriver: false }),
-          Animated.timing(haloOpacity, { toValue: 0.3, duration: 2000, useNativeDriver: false }),
-        ]),
-        Animated.sequence([
-          Animated.timing(haloRadius, { toValue: 80, duration: 2000, useNativeDriver: false }),
-          Animated.timing(haloRadius, { toValue: 60, duration: 2000, useNativeDriver: false }),
-        ]),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
+    loadSettings().then(settings => {
+      setTempUnit(settings.tempUnit);
+      setNotificationsEnabled(settings.notificationsEnabled);
+      setProbabilityAlert(settings.probabilityAlert);
+      setDailyForecast(settings.dailyForecast);
+      setSettingsLoaded(true);
+    });
   }, []);
 
-  const glassCard = {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+  // 切换温度单位并持久化
+  const handleToggleTempUnit = () => {
+    const newUnit = tempUnit === '°C' ? '°F' : '°C';
+    setTempUnit(newUnit);
+    saveSettings({ tempUnit: newUnit });
   };
 
+  // 切换通知设置并持久化
+  const handleToggleNotification = (value) => {
+    setNotificationsEnabled(value);
+    saveSettings({ notificationsEnabled: value });
+  };
+
+  const handleToggleProbability = (value) => {
+    setProbabilityAlert(value);
+    saveSettings({ probabilityAlert: value });
+  };
+
+  const handleToggleDailyForecast = (value) => {
+    setDailyForecast(value);
+    saveSettings({ dailyForecast: value });
+  };
+
+  const currentCity = { name: '北京' };
+
+  const settingItems = [
+    {
+      icon: 'thermometer-outline',
+      label: '温度单位',
+      desc: `当前：${tempUnit === '°C' ? '摄氏度' : '华氏度'}`,
+      action: handleToggleTempUnit,
+      badge: tempUnit,
+    },
+    {
+      icon: 'language-outline',
+      label: '语言',
+      desc: '简体中文',
+      badge: '中文',
+    },
+  ];
+
+  const toggleItems = [
+    { icon: 'notifications-outline', label: '通知推送', desc: '接收重要天气预警和概率提醒', value: notificationsEnabled, set: handleToggleNotification },
+    { icon: 'alert-circle-outline', label: '高概率预警', desc: '收藏地点概率>70% 时推送', value: probabilityAlert, set: handleToggleProbability },
+    { icon: 'sunny-outline', label: '每日预报', desc: '每天早上 8 点推送今日预报', value: dailyForecast, set: handleToggleDailyForecast },
+  ];
+
+  const aboutItems = [
+    { icon: 'help-circle-outline', label: '帮助与反馈', color: '#FFD60A' },
+    { icon: 'shield-checkmark-outline', label: '隐私政策', color: '#5B6CF9' },
+    { icon: 'code-slash-outline', label: '开源许可', color: '#30D158' },
+    { icon: 'information-circle-outline', label: '版本号', sub: 'v1.0.0', color: 'rgba(255,255,255,0.4)' },
+  ];
+
   return (
-    <View className="flex-1" style={{ backgroundColor: '#0F0D1E' }}>
-      <StatusBar style="light" />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
 
-      {/* 光晕装饰 */}
-      <Animated.View className="absolute top-10 right-0 w-40 h-40"
-        style={{
-          backgroundColor: 'transparent',
-          shadowColor: '#DAA520',
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: haloOpacity,
-          shadowRadius: haloRadius,
-          elevation: 30,
-        }}
-      />
+        {/* 1. App 信息头部（设计稿 6.4.1） */}
+        <View style={styles.appHeader}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.appIcon}>🌤️</Text>
+          </View>
+          <Text style={styles.appName}>摄影爱好者</Text>
+          <Text style={styles.appTagline}>预见金山，不负此行</Text>
+        </View>
 
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-          {/* 用户信息头部 */}
-          <FadeInView delay={0} duration={400}>
-            <View className="mx-4 mt-4 p-5 rounded-3xl" style={glassCard}>
-              <View className="flex-row items-center">
-                <View className="relative">
-                  <Image
-                    source={{ uri: user.avatar }}
-                    style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: 'rgba(218,165,32,0.3)' }}
-                  />
-                  <View className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full items-center justify-center"
-                    style={{ backgroundColor: '#DAA520' }}>
-                    <Text className="text-xs">⭐</Text>
-                  </View>
-                </View>
-                <View className="ml-4 flex-1">
-                  <Text className="text-white text-xl font-bold">{user.name}</Text>
-                  <Text className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>{user.level}</Text>
-                  <View className="flex-row mt-3">
-                    {[
-                      { num: user.works, label: '作品' },
-                      { num: user.favorites, label: '收藏' },
-                      { num: user.followers, label: '粉丝' },
-                    ].map((item, i) => (
-                      <View key={i} className="items-center mr-5">
-                        <Text className="text-white text-base font-bold">{item.num}</Text>
-                        <Text className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.label}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-                <TouchableOpacity
-                  className="px-4 py-2 rounded-full"
-                  style={{ backgroundColor: 'rgba(218,165,32,0.15)', borderWidth: 1, borderColor: 'rgba(218,165,32,0.2)' }}
-                >
-                  <Text style={{ color: '#DAA520', fontWeight: '600', fontSize: 13 }}>编辑</Text>
-                </TouchableOpacity>
-              </View>
+        {/* 1.5 统计数据胶囊（设计稿 6.4.2） */}
+        <View style={styles.statsRow}>
+          <View style={styles.statsCapsule}>
+            <Text style={styles.statsNumber}>12</Text>
+            <Text style={styles.statsLabel}>发帖数</Text>
+          </View>
+          <View style={styles.statsCapsule}>
+            <Text style={styles.statsNumber}>348</Text>
+            <Text style={styles.statsLabel}>获赞数</Text>
+          </View>
+          <View style={styles.statsCapsule}>
+            <Text style={styles.statsNumber}>5</Text>
+            <Text style={styles.statsLabel}>关注城市</Text>
+          </View>
+        </View>
+
+        {/* 2. 城市管理 */}
+        <View style={styles.glassCard}>
+          <Text style={styles.sectionTitle}>📍 当前城市</Text>
+          <View style={styles.cityRow}>
+            <View style={styles.cityInfo}>
+              <Ionicons name="location" size={18} color="#DAA520" />
+              <Text style={styles.cityName}>{currentCity.name}</Text>
             </View>
-          </FadeInView>
-
-          {/* 我的收藏 */}
-          <FadeInView delay={100} duration={400}>
-            <View className="mx-4 mt-5">
-              <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-white text-base font-bold">⭐ 我的收藏</Text>
-                <TouchableOpacity>
-                  <Text className="text-sm font-medium" style={{ color: '#DAA520' }}>查看全部</Text>
-                </TouchableOpacity>
-              </View>
-              {favoriteLocations.map((loc, i) => {
-                const probColor = getProbabilityColor(loc.probability);
-                return (
-                  <TouchableOpacity key={i} className="rounded-xl p-4 mb-3" style={glassCard}>
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-1">
-                        <Text className="text-white text-base font-semibold">{loc.name}</Text>
-                        <View className="flex-row items-center mt-1.5">
-                          <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>今日概率：</Text>
-                          <Text className="text-lg font-bold" style={{ color: probColor }}>{loc.probability}%</Text>
-                          <View className="ml-3 px-2.5 py-0.5 rounded-full"
-                            style={{ backgroundColor: `${probColor}20` }}>
-                            <Text className="text-xs font-medium" style={{ color: probColor }}>{loc.level}</Text>
-                          </View>
-                        </View>
-                      </View>
-                      <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.25)" />
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </FadeInView>
-
-          {/* 通知设置 */}
-          <FadeInView delay={200} duration={400}>
-            <View className="mx-4 mt-5">
-              <Text className="text-white text-base font-bold mb-3">🔔 通知设置</Text>
-              <View className="rounded-2xl overflow-hidden" style={glassCard}>
-                {[
-                  { label: '通知推送', desc: '接收重要天气预警和概率提醒', val: notificationsEnabled, set: setNotificationsEnabled },
-                  { label: '高概率预警', desc: '收藏地点概率>70% 时推送', val: probabilityAlert, set: setProbabilityAlert },
-                  { label: '每日预报', desc: '每天早上 8 点推送今日预报', val: dailyForecast, set: setDailyForecast },
-                ].map((item, i, arr) => (
-                  <View key={i} className={`flex-row items-center justify-between p-4 ${i < arr.length - 1 ? '' : ''}`}
-                    style={i < arr.length - 1 ? { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' } : {}}>
-                    <View className="flex-1 mr-3">
-                      <Text className="text-white text-sm font-medium">{item.label}</Text>
-                      <Text className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.desc}</Text>
-                    </View>
-                    <Switch
-                      value={item.val}
-                      onValueChange={item.set}
-                      trackColor={{ false: 'rgba(255,255,255,0.1)', true: '#DAA520' }}
-                      thumbColor="#FFFFFF"
-                    />
-                  </View>
-                ))}
-              </View>
-            </View>
-          </FadeInView>
-
-          {/* 其他功能 */}
-          <FadeInView delay={300} duration={400}>
-            <View className="mx-4 mt-5">
-              <View className="rounded-2xl overflow-hidden" style={glassCard}>
-                {[
-                  { icon: 'star', title: '我的作品', sub: '查看我的实拍分享' },
-                  { icon: 'cloud-download', title: '离线地图', sub: '下载景点离线数据' },
-                  { icon: 'help-circle', title: '帮助与反馈', sub: '遇到问题？联系我们' },
-                  { icon: 'shield-checkmark', title: '隐私政策', sub: '查看隐私保护政策' },
-                  { icon: 'information-circle', title: '关于我们', sub: '版本号 v1.0.0' },
-                ].map((item, i, arr) => (
-                  <TouchableOpacity key={i} className="flex-row items-center justify-between p-4"
-                    style={i < arr.length - 1 ? { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' } : {}}>
-                    <View className="flex-row items-center flex-1">
-                      <View className="w-9 h-9 rounded-full items-center justify-center"
-                        style={{ backgroundColor: 'rgba(218,165,32,0.12)' }}>
-                        <Ionicons name={item.icon} size={20} color="#DAA520" />
-                      </View>
-                      <View className="ml-3 flex-1">
-                        <Text className="text-white text-sm font-medium">{item.title}</Text>
-                        <Text className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.sub}</Text>
-                      </View>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.2)" />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </FadeInView>
-
-          {/* 退出登录 */}
-          <View className="mx-4 mt-6 mb-3">
-            <TouchableOpacity className="rounded-2xl p-4 items-center"
-              style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)' }}>
-              <View className="flex-row items-center">
-                <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-                <Text className="ml-2 text-red-400 font-medium text-sm">退出登录</Text>
-              </View>
+            <TouchableOpacity style={styles.citySwitchBtn}>
+              <Text style={styles.citySwitchText}>切换</Text>
             </TouchableOpacity>
           </View>
+        </View>
 
-          {/* 底部 */}
-          <View className="py-5 items-center">
-            <Text className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>玩天气 · 预见金山不负此行</Text>
-            <Text className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.15)' }}>© 2026 PlayWeather Team</Text>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+        {/* 3. 数据来源 */}
+        <View style={[styles.glassCard, styles.dataSource]}>
+          <Ionicons name="cloud-done-outline" size={20} color="rgba(255,255,255,0.5)" />
+          <Text style={styles.dataSourceText}>数据来源：和风天气企业版</Text>
+        </View>
+
+        {/* 4. 设置选项 */}
+        <View style={styles.glassCard}>
+          <Text style={styles.sectionTitle}>⚙️ 设置</Text>
+          {settingItems.map((item, i) => (
+            <TouchableOpacity
+              key={i}
+              style={[styles.settingRow, i < settingItems.length - 1 && styles.settingRowBorder]}
+              onPress={item.action}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={item.icon} size={20} color="rgba(255,255,255,0.5)" />
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>{item.label}</Text>
+                <Text style={styles.settingDesc}>{item.desc}</Text>
+              </View>
+              {item.badge ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{item.badge}</Text>
+                </View>
+              ) : null}
+              <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.2)" style={{ marginLeft: 8 }} />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* 5. 通知开关 */}
+        <View style={styles.glassCard}>
+          <Text style={styles.sectionTitle}>🔔 通知</Text>
+          {toggleItems.map((item, i) => (
+            <View
+              key={i}
+              style={[styles.settingRow, i < toggleItems.length - 1 && styles.settingRowBorder]}
+            >
+              <Ionicons name={item.icon} size={20} color="rgba(255,255,255,0.5)" />
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>{item.label}</Text>
+                <Text style={styles.settingDesc}>{item.desc}</Text>
+              </View>
+              <Switch
+                value={item.value}
+                onValueChange={item.set}
+                trackColor={{ false: 'rgba(255,255,255,0.1)', true: '#DAA520' }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+          ))}
+        </View>
+
+        {/* 6. 关于 */}
+        <View style={styles.glassCard}>
+          <Text style={styles.sectionTitle}>📋 关于</Text>
+          {aboutItems.map((item, i) => (
+            <TouchableOpacity
+              key={i}
+              style={[styles.settingRow, i < aboutItems.length - 1 && styles.settingRowBorder]}
+              activeOpacity={0.7}
+            >
+              <Ionicons name={item.icon} size={20} color={item.color} />
+              <View style={styles.settingText}>
+                <Text style={styles.settingLabel}>{item.label}</Text>
+              </View>
+              {item.sub ? (
+                <Text style={styles.aboutSub}>{item.sub}</Text>
+              ) : (
+                <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.2)" />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* 7. 退出登录 */}
+        <TouchableOpacity style={styles.logoutBtn} activeOpacity={0.7}>
+          <Ionicons name="log-out-outline" size={18} color="#FF375F" />
+          <Text style={styles.logoutText}>退出登录</Text>
+        </TouchableOpacity>
+
+        {/* 8. 底部 */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>玩天气 · 预见金山不负此行</Text>
+          <Text style={styles.footerCopy}>© 2026 PlayWeather Team</Text>
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
   );
 }
+
+// ==================== 样式 ====================
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Surface.Base },
+  scroll: { flex: 1 },
+  scrollContent: { padding: Spacing.lg, paddingBottom: 100 },
+
+  glassCard: {
+    backgroundColor: 'rgba(18, 24, 42, 0.75)',
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: whiteAlpha(0.06),
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: FontSize.h3,
+    fontWeight: FontWeight.semiBold,
+    color: TextColor.Primary,
+    marginBottom: Spacing.md,
+  },
+
+  // App 头部（大圆形头像 + 昵称 + 签名）
+  appHeader: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xxl,
+    backgroundColor: 'rgba(18, 24, 42, 0.75)',
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: whiteAlpha(0.06),
+    marginBottom: Spacing.md,
+  },
+  avatarCircle: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: Surface.Surface2,
+    borderWidth: 3, borderColor: Brand.Gold,
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  appIcon: { fontSize: 36 },
+  appName: {
+    fontSize: FontSize.h1, fontWeight: FontWeight.bold,
+    color: TextColor.Primary, marginBottom: Spacing.xs,
+  },
+  appTagline: { fontSize: FontSize.body, color: TextColor.Secondary, marginBottom: Spacing.md },
+  appVersion: { fontSize: FontSize.caption, color: TextColor.Disabled },
+
+  // 统计数据胶囊
+  statsRow: {
+    flexDirection: 'row', justifyContent: 'space-evenly',
+    marginHorizontal: Spacing.lg, marginBottom: Spacing.md,
+  },
+  statsCapsule: {
+    flex: 1, alignItems: 'center', backgroundColor: Surface.Surface2,
+    borderRadius: Radius.md, paddingVertical: Spacing.md,
+    marginHorizontal: Spacing.xs,
+    borderWidth: 1, borderColor: whiteAlpha(0.05),
+  },
+  statsNumber: { fontSize: FontSize.h3, fontWeight: FontWeight.bold, color: Brand.Gold },
+  statsLabel: { fontSize: FontSize.micro, color: TextColor.Tertiary, marginTop: 2 },
+
+  // 城市管理
+  cityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cityInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  cityName: { fontSize: FontSize.body, fontWeight: FontWeight.semiBold, color: TextColor.Primary },
+  citySwitchBtn: {
+    backgroundColor: goldAlpha(0.15), borderWidth: 1, borderColor: goldAlpha(0.25),
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Radius.full,
+  },
+  citySwitchText: { fontSize: FontSize.caption, color: Brand.Gold, fontWeight: FontWeight.semiBold },
+
+  // 数据来源
+  dataSource: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: 14 },
+  dataSourceText: { fontSize: FontSize.caption, color: TextColor.Tertiary },
+
+  // 设置列表行
+  settingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
+  settingRowBorder: { borderBottomWidth: 1, borderBottomColor: whiteAlpha(0.06), marginBottom: 1 },
+  settingText: { flex: 1, marginLeft: Spacing.md },
+  settingLabel: { fontSize: FontSize.body, fontWeight: FontWeight.medium, color: TextColor.Primary },
+  settingDesc: { fontSize: FontSize.caption, color: TextColor.Tertiary, marginTop: 2 },
+
+  // Badge 和 关于
+  badge: {
+    backgroundColor: goldAlpha(0.15), paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs, borderRadius: Radius.sm,
+  },
+  badgeText: { fontSize: FontSize.caption, color: Brand.Gold, fontWeight: FontWeight.semiBold },
+  aboutSub: { fontSize: FontSize.caption, color: TextColor.Tertiary },
+
+  // 退出登录
+  logoutBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    backgroundColor: 'rgba(255,55,95,0.08)', borderWidth: 1, borderColor: 'rgba(255,55,95,0.2)',
+    borderRadius: Radius.lg, paddingVertical: 14, marginTop: Spacing.xs, marginBottom: Spacing.md,
+  },
+  logoutText: { fontSize: FontSize.body, color: Accent.SunsetOrange, fontWeight: FontWeight.medium },
+
+  // 底部
+  footer: { alignItems: 'center', paddingVertical: Spacing.lg },
+  footerText: { fontSize: FontSize.caption, color: TextColor.Disabled },
+  footerCopy: { fontSize: FontSize.micro, color: TextColor.Disabled, marginTop: 4 },
+});

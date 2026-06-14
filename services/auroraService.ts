@@ -11,7 +11,7 @@
  */
 
 import axios from 'axios';
-import { getCachedData, setCachedData, isCacheValid } from './cache';
+import { getCachedData, setCachedData, isCacheValid } from './cache.ts';
 
 // ==================== 配置 ====================
 
@@ -184,6 +184,7 @@ export function calculateAuroraVisibility(
   cloudCover: number
 ): {
   visible: boolean;
+  latitude: number;
   probability: number;
   quality: '史诗级' | '优秀' | '良好' | '一般' | '较差';
 } {
@@ -230,6 +231,7 @@ export function calculateAuroraVisibility(
 
   return {
     visible: finalProbability >= 20 && cloudCover < 80,
+    latitude: auroraLatitude,
     probability: finalProbability,
     quality
   };

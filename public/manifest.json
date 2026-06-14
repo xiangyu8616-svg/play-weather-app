@@ -1,0 +1,23 @@
+{
+  "name": "玩天气",
+  "short_name": "玩天气",
+  "description": "预见金山，不负此行 - 摄影师专属天气应用",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F0D1E",
+  "theme_color": "#DAA520",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

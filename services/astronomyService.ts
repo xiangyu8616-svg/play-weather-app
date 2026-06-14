@@ -13,7 +13,7 @@
  */
 
 import SunCalc from 'suncalc';
-import { getCachedData, setCachedData, isCacheValid } from './cache';
+import { getCachedData, setCachedData, isCacheValid } from './cache.ts';
 
 // ==================== 类型定义 ====================
 
@@ -26,7 +26,7 @@ export interface SunTimes {
   sunriseEnd: Date;       // 日出结束（太阳完全升起）
   sunsetStart: Date;      // 日落开始（太阳开始落下）
   goldenHourEnd: Date;    // 黄金时刻结束（早晨）
-  goldenHourStart: Date;  // 黄金时刻开始（傍晚）
+  goldenHour: Date;       // 黄金时刻（傍晚开始）= suncalc 原生字段
   solarNoon: Date;        // 正午时间
   nadir: Date;            // 最低点（午夜）
   nightEnd: Date;         // 夜晚结束
@@ -151,10 +151,9 @@ export function getSunPosition(
  */
 export function getMoonPhase(date: Date): MoonPhase {
   try {
-    const cacheKey = `astro:moon:${date.toISOString().split('T')[0]}`;
-    
-    // 使用 suncalc 计算月相
-    const phaseData = SunCalc.getMoonPhase(date);
+    // suncalc 1.9.0 正确方法名是 getMoonIllumination（非 getMoonPhase）
+    // 返回 { fraction: 0-1, phase: 0-1, angle: radians }
+    const phaseData = SunCalc.getMoonIllumination(date);
     
     // 计算月龄（从新月开始的天数）
     const moonAge = phaseData.phase * 29.53; // 朔望月周期约 29.53 天
@@ -162,17 +161,36 @@ export function getMoonPhase(date: Date): MoonPhase {
     // 获取月相名称
     const phaseName = getMoonPhaseName(phaseData.phase);
     
+    // 使用 getMoonPosition 获取实际距离
+    let distance = 384400; // 默认平均距离
+    try {
+      const moonPos = SunCalc.getMoonPosition(date, 0, 0);
+      if (moonPos && moonPos.distance) {
+        distance = Math.round(moonPos.distance);
+      }
+    } catch (_) {
+      // 距离计算失败时使用默认值
+    }
+    
     return {
       phase: phaseData.phase,
       phaseName,
-      illumination: phaseData.illumination * 100,
+      illumination: phaseData.fraction * 100, // fraction 是照亮比例 (0-1)
       age: Math.round(moonAge),
-      distance: 384400, // 平均距离，简化处理
+      distance,
       angularDiameter: 0.009 // 约 0.5 度
     };
   } catch (error) {
     console.error('计算月相失败:', error);
-    throw error;
+    // 返回安全的 fallback 数据而非抛出异常，避免阻塞调用方
+    return {
+      phase: 0,
+      phaseName: '新月',
+      illumination: 0,
+      age: 0,
+      distance: 384400,
+      angularDiameter: 0.009
+    };
   }
 }
 
@@ -189,11 +207,23 @@ export function getMoonTimes(
   lng: number
 ): MoonTimes {
   try {
+    // suncalc 1.9.0 返回 { rise, set, alwaysUp, alwaysDown }
+    // 需要映射到 MoonTimes 接口的 moonrise/moonset
     const times = SunCalc.getMoonTimes(date, lat, lng, true);
-    return times;
+    return {
+      moonrise: (times as any).rise || null,
+      moonset: (times as any).set || null,
+      alwaysUp: !!(times as any).alwaysUp,
+      alwaysDown: !!(times as any).alwaysDown
+    };
   } catch (error) {
     console.error('计算月出月落失败:', error);
-    throw error;
+    return {
+      moonrise: null,
+      moonset: null,
+      alwaysUp: false,
+      alwaysDown: false
+    };
   }
 }
 
@@ -212,30 +242,41 @@ export function getPhotographyTimes(
   try {
     const sunTimes = getSunTimes(date, lat, lng);
     
-    // 计算黄金时刻
+    // 防御性检查：suncalc 在某些高纬度/极端日期可能返回 undefined
+    const safeGet = (field: Date | undefined, fallbackMs: number): Date => 
+      field instanceof Date && !isNaN(field.getTime()) ? field : new Date(Date.now() + fallbackMs);
+    
+    // 计算黄金时刻（早晨: sunrise → goldenHourEnd）
+    const goldenHourEnd = safeGet(sunTimes.goldenHourEnd, 3600000);
+    const goldenHourStart = safeGet(sunTimes.goldenHour, -3600000);
+    const sunrise = safeGet(sunTimes.sunrise, 0);
+    const sunset = safeGet(sunTimes.sunset, 43200000);
+    const civilDawn = safeGet(sunTimes.civilDawn, -7200000);
+    const civilDusk = safeGet(sunTimes.civilDusk, 7200000);
+    
     const goldenHourMorning = {
-      start: sunTimes.sunrise,
-      end: sunTimes.goldenHourEnd,
-      duration: Math.round((sunTimes.goldenHourEnd.getTime() - sunTimes.sunrise.getTime()) / 60000)
+      start: sunrise,
+      end: goldenHourEnd,
+      duration: Math.round((goldenHourEnd.getTime() - sunrise.getTime()) / 60000)
     };
     
     const goldenHourEvening = {
-      start: sunTimes.goldenHourStart,
-      end: sunTimes.sunset,
-      duration: Math.round((sunTimes.sunset.getTime() - sunTimes.goldenHourStart.getTime()) / 60000)
+      start: goldenHourStart,
+      end: sunset,
+      duration: Math.round((sunset.getTime() - goldenHourStart.getTime()) / 60000)
     };
     
     // 计算蓝色时刻（民用曙暮光）
     const blueHourMorning = {
-      start: sunTimes.civilDawn,
-      end: sunTimes.sunrise,
-      duration: Math.round((sunTimes.sunrise.getTime() - sunTimes.civilDawn.getTime()) / 60000)
+      start: civilDawn,
+      end: sunrise,
+      duration: Math.round((sunrise.getTime() - civilDawn.getTime()) / 60000)
     };
     
     const blueHourEvening = {
-      start: sunTimes.sunset,
-      end: sunTimes.civilDusk,
-      duration: Math.round((sunTimes.civilDusk.getTime() - sunTimes.sunset.getTime()) / 60000)
+      start: sunset,
+      end: civilDusk,
+      duration: Math.round((civilDusk.getTime() - sunset.getTime()) / 60000)
     };
     
     return {
@@ -265,8 +306,13 @@ export function isGoldenHour(lat: number, lng: number): {
     const now = new Date();
     const sunTimes = getSunTimes(now, lat, lng);
     
+    // 防御性检查
+    if (!sunTimes.sunrise || !sunTimes.sunset) {
+      return { isGoldenHour: false, type: null, remainingMinutes: 0 };
+    }
+    
     // 检查是否在早晨黄金时刻
-    if (now >= sunTimes.sunrise && now <= sunTimes.goldenHourEnd) {
+    if (sunTimes.goldenHourEnd && now >= sunTimes.sunrise && now <= sunTimes.goldenHourEnd) {
       const remaining = Math.round((sunTimes.goldenHourEnd.getTime() - now.getTime()) / 60000);
       return {
         isGoldenHour: true,
@@ -276,7 +322,7 @@ export function isGoldenHour(lat: number, lng: number): {
     }
     
     // 检查是否在傍晚黄金时刻
-    if (now >= sunTimes.goldenHourStart && now <= sunTimes.sunset) {
+    if (sunTimes.goldenHour && now >= sunTimes.goldenHour && now <= sunTimes.sunset) {
       const remaining = Math.round((sunTimes.sunset.getTime() - now.getTime()) / 60000);
       return {
         isGoldenHour: true,
