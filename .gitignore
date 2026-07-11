@@ -41,3 +41,6 @@ yarn-error.*
 coverage/
 
 .vercel
+
+# API Keys (local only; use environment variables in prod)
+config/apiKeys.js

@@ -12,26 +12,33 @@
 
 import axios from 'axios';
 import { getCachedData, setCachedData, isCacheValid } from '../cache.ts';
+import { QWEATHER_KEY, API_CONFIG } from '../../config/apiKeys';
 
 // ==================== 配置 ====================
 
+// BFF 模式：USE_BFF 时走 /api/weather 代理，否则直接 key
+const USE_BFF = QWEATHER_KEY === 'USE_BFF';
 const QWEATHER_CONFIG = {
-  key: 'YOUR_API_KEY', // TODO: 替换为实际 API Key
-  lang: 'zh',
+  key: USE_BFF ? '' : QWEATHER_KEY,
+  lang: API_CONFIG.lang,
   type: 'weather'
 };
 
-const BASE_URL = 'https://m85ctw7p24.re.qweatherapi.com/v7';
+const BASE_URL = USE_BFF ? '/api' : API_CONFIG.baseURL;
 
 // 创建 axios 实例
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
-  params: {
+  timeout: API_CONFIG.timeout,
+});
+
+// BFF 模式下不需要全局 key 参数；直连模式下才附带
+if (!USE_BFF) {
+  apiClient.defaults.params = {
     key: QWEATHER_CONFIG.key,
     lang: QWEATHER_CONFIG.lang
-  }
-});
+  };
+}
 
 // ==================== 类型定义 ====================
 
