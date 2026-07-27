@@ -44,3 +44,6 @@ coverage/
 
 # API Keys (local only; use environment variables in prod)
 config/apiKeys.js
+
+# Local secrets (JWT private keys etc.)
+secrets/
