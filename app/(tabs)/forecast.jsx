@@ -1,45 +1,44 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import qweatherService from '../../services/weather/qweatherService';
 import astronomyService from '../../services/astronomyService';
 import weatherService from '../../services/weather/weatherService';
-import FadeInView from '../../components/animations/FadeInView';
-import { getProbabilityColor } from '../../utils/colors';
-import { Brand, Accent, Surface, TextColor, Spacing, Radius, FontSize, FontWeight, goldAlpha, whiteAlpha, skyBlueAlpha } from '../../styles/designTokens';
+import {
+  Bg, Accent, TextColor, Spacing, Radius,
+  FontSize, FontWeight, FontFamily, auroraAlpha, whiteAlpha,
+  Shadow, CardStyle, getWeatherBackground, getWeatherIconColor,
+} from '../../styles/designTokens';
 
-// ─── 辅助函数 ───────────────────────────────────────────────
-
-function getWeatherEmoji(text) {
-  if (!text) return '🌤';
-  const lower = text.toLowerCase();
-  if (lower.includes('晴')) return '☀️';
-  if (lower.includes('多云')) return '⛅';
-  if (lower.includes('阴')) return '☁️';
-  if (lower.includes('雨')) return '🌧';
-  if (lower.includes('雪')) return '❄️';
-  if (lower.includes('雾')) return '🌫';
-  return '🌤';
-}
+// ═══════════════════════════════════════════
+// 辅助函数
+// ═══════════════════════════════════════════
 
 function getAqiColor(aqi) {
-  if (!aqi) return '#888';
-  if (aqi <= 50) return '#30D158';
-  if (aqi <= 100) return '#FFD60A';
+  if (!aqi) return TextColor.muted;
+  if (aqi <= 50) return Accent.success;
+  if (aqi <= 100) return Accent.star;
   if (aqi <= 150) return '#FF9F0A';
-  if (aqi <= 200) return '#FF375F';
-  if (aqi <= 300) return '#BF5AF2';
+  if (aqi <= 200) return Accent.danger;
   return '#8B0000';
 }
 
-// ─── 主组件 ─────────────────────────────────────────────────
+function getWeatherIconName(text) {
+  const t = (text || '').toLowerCase();
+  if (t.includes('晴')) return 'sunny';
+  if (t.includes('多云')) return 'partly-sunny';
+  if (t.includes('阴')) return 'cloudy';
+  if (t.includes('雨')) return 'rainy';
+  if (t.includes('雪')) return 'snow';
+  return 'cloud';
+}
 
-/**
- * 预报页面 - 7 天天气趋势（重排版）
- * 结构：WeatherBanner → 今日光质时间轴 → 7天详细预报 → 环境指数 2×2
- */
+// ═══════════════════════════════════════════
+// 主组件
+// ═══════════════════════════════════════════
+
 export default function ForecastScreen() {
-  // 当前选中的日期
   const [selectedDay, setSelectedDay] = useState(0);
   const [loading, setLoading] = useState(true);
   const [astronomyData, setAstronomyData] = useState(null);
@@ -48,18 +47,9 @@ export default function ForecastScreen() {
   const [nowWeather, setNowWeather] = useState(null);
   const [dailyForecast, setDailyForecast] = useState([]);
 
-  // 当前城市
   const currentCity = { name: '北京' };
+  const LOCATION = { lat: 39.9042, lng: 116.4074, cityId: '101010100', name: '北京市' };
 
-  // 北京坐标（实际应从用户定位或选择的城市获取）
-  const LOCATION = {
-    lat: 39.9042,
-    lng: 116.4074,
-    cityId: '101010100', // 北京城市 ID
-    name: '北京市'
-  };
-
-  // 温度范围（用于温度条可视化）
   const maxTemp = useMemo(() => {
     if (!dailyForecast || dailyForecast.length === 0) return 35;
     return Math.max(...dailyForecast.map(d => parseInt(d.tempMax) || 0));
@@ -70,7 +60,6 @@ export default function ForecastScreen() {
     return Math.min(...dailyForecast.map(d => parseInt(d.tempMin) || 0));
   }, [dailyForecast]);
 
-  // 格式化日期显示
   const formatDay = (dateStr, index) => {
     if (index === 0) return '今天';
     if (index === 1) return '明天';
@@ -84,7 +73,6 @@ export default function ForecastScreen() {
     return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
-  // 将 dailyForecast (API 格式) 转换为 forecastData (组件渲染格式)
   const forecastData = (dailyForecast || []).map((item, index) => ({
     day: formatDay(item.fxDate, index),
     date: formatDate(item.fxDate),
@@ -93,12 +81,9 @@ export default function ForecastScreen() {
     low: parseInt(item.tempMin) || 0,
     rain: Math.min(100, Math.round(parseFloat(item.precip || 0) * 10)),
     wind: `${item.windDirDay || ''}${item.windScaleDay || ''}级`,
+    icon: getWeatherIconName(item.textDay),
   }));
 
-  // 确保 selectedDay 不超出数组范围
-  const safeSelectedDay = Math.min(selectedDay, Math.max(0, forecastData.length - 1));
-
-  // 加载天气数据
   useEffect(() => {
     loadWeatherData();
     loadAstronomyData();
@@ -114,7 +99,6 @@ export default function ForecastScreen() {
       setDailyForecast(forecast);
     } catch (error) {
       console.error('加载天气数据失败:', error);
-      // 使用 Mock 数据
       setNowWeather(qweatherService.generateMockNowWeather());
       setDailyForecast(qweatherService.generateMockDailyForecast());
     } finally {
@@ -125,109 +109,23 @@ export default function ForecastScreen() {
   async function loadAstronomyData() {
     try {
       const now = new Date();
-      
-      // 并行加载所有数据
       const [sunTimes, moonPhase, moonTimes, photoTimes, aqi, uv] = await Promise.all([
-        // 天文数据
         astronomyService.getSunTimes(now, LOCATION.lat, LOCATION.lng),
         astronomyService.getMoonPhase(now),
         astronomyService.getMoonTimes(now, LOCATION.lat, LOCATION.lng),
         astronomyService.getPhotographyTimes(now, LOCATION.lat, LOCATION.lng),
-        // 空气质量
         weatherService.getAQI(LOCATION.cityId),
-        weatherService.getUVIndex(LOCATION.cityId)
+        weatherService.getUVIndex(LOCATION.cityId),
       ]);
-
-      setAstronomyData({
-        sunTimes,
-        moonPhase,
-        moonTimes,
-        photoTimes
-      });
+      setAstronomyData({ sunTimes, moonPhase, moonTimes, photoTimes });
       setAqiData(aqi);
       setUvData(uv);
-    } catch (error) {
-      console.error('加载天文数据失败:', error);
-      // 提供 fallback mock data for astronomy
-      setAstronomyData({
-        sunTimes: { sunrise: new Date(2026, 5, 1, 5, 45), sunset: new Date(2026, 5, 1, 19, 30) },
-        moonPhase: { phaseName: '上弦月', age: 7, illumination: 50 },
-        moonTimes: { moonrise: new Date(2026, 5, 1, 12, 0), moonset: new Date(2026, 5, 1, 0, 30) },
-        photoTimes: {
-          goldenHourMorning: { start: new Date(2026, 5, 1, 5, 45), end: new Date(2026, 5, 1, 6, 45), duration: 60 },
-          goldenHourEvening: { start: new Date(2026, 5, 1, 18, 30), end: new Date(2026, 5, 1, 19, 30), duration: 60 },
-          blueHourMorning: { start: new Date(2026, 5, 1, 5, 15), end: new Date(2026, 5, 1, 5, 45) },
-          blueHourEvening: { start: new Date(2026, 5, 1, 19, 30), end: new Date(2026, 5, 1, 20, 0) },
-        }
-      });
+    } catch {
       setAqiData({ aqi: 75, category: '良', primaryPollutant: 'PM2.5' });
       setUvData({ uvIndex: 5, level: '中等', advice: '建议涂抹防晒霜，佩戴帽子' });
     }
   }
 
-  // 获取天气图标
-  const getWeatherIcon = (condition) => {
-    const icons = {
-      '晴': 'sunny',
-      '多云': 'partly-sunny',
-      '阴': 'cloudy',
-      '小雨': 'rainy',
-      '中雨': 'rainy',
-      '大雨': 'thunderstorm',
-    };
-    return icons[condition] || 'cloud';
-  };
-
-  // 获取 UV 等级颜色
-  const getUvColor = (uvIndex) => {
-    if (uvIndex <= 2) return '#52C41A';
-    if (uvIndex <= 4) return '#DAA520';
-    if (uvIndex <= 6) return '#FFA500';
-    if (uvIndex <= 8) return '#FF6B35';
-    if (uvIndex <= 10) return '#8B00FF';
-    return '#8B0000';
-  };
-
-  // 光晕动画
-  const haloOpacity1 = useState(new Animated.Value(0.3))[0];
-  const haloRadius1 = useState(new Animated.Value(60))[0];
-  const haloOpacity2 = useState(new Animated.Value(0.4))[0];
-  const haloRadius2 = useState(new Animated.Value(70))[0];
-
-  useEffect(() => {
-    const pulse1 = Animated.loop(
-      Animated.sequence([
-        Animated.sequence([
-          Animated.parallel([
-            Animated.timing(haloOpacity1, { toValue: 0.6, duration: 2000, useNativeDriver: false }),
-            Animated.timing(haloRadius1, { toValue: 80, duration: 2000, useNativeDriver: false }),
-          ]),
-          Animated.parallel([
-            Animated.timing(haloOpacity1, { toValue: 0.3, duration: 2000, useNativeDriver: false }),
-            Animated.timing(haloRadius1, { toValue: 50, duration: 2000, useNativeDriver: false }),
-          ]),
-        ]),
-      ])
-    );
-    const pulse2 = Animated.loop(
-      Animated.sequence([
-        Animated.sequence([
-          Animated.parallel([
-            Animated.timing(haloOpacity2, { toValue: 0.6, duration: 2000, useNativeDriver: false }),
-            Animated.timing(haloRadius2, { toValue: 80, duration: 2000, useNativeDriver: false }),
-          ]),
-          Animated.parallel([
-            Animated.timing(haloOpacity2, { toValue: 0.4, duration: 2000, useNativeDriver: false }),
-            Animated.timing(haloRadius2, { toValue: 60, duration: 2000, useNativeDriver: false }),
-          ]),
-        ]),
-      ])
-    );
-    pulse1.start();
-    pulse2.start();
-  }, []);
-
-  // 格式化时间
   const formatTime = (date) => {
     if (!date) return '--:--';
     const hours = date.getHours().toString().padStart(2, '0');
@@ -235,254 +133,353 @@ export default function ForecastScreen() {
     return `${hours}:${minutes}`;
   };
 
-  // 获取月相图标
-  const getMoonPhaseIcon = (phaseName) => {
-    return 'moon';
-  };
-
-  // ─── Loading 状态 ──────────────────────────────────────────
-
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0F0D1E', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#DAA520" />
-        <Text style={{ color: 'rgba(255,255,255,0.5)', marginTop: 12 }}>加载天气数据...</Text>
+      <View style={{ flex: 1, backgroundColor: Bg.primary, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={Accent.aurora} />
+        <Text style={{ color: TextColor.secondary, marginTop: 12 }}>加载天气数据...</Text>
       </View>
     );
   }
 
-  // ─── 渲染 ──────────────────────────────────────────────────
+  const temp = Math.round(nowWeather?.temp || 25);
+  const bgColors = getWeatherBackground(nowWeather?.text, nowWeather?.code);
+  const range = (maxTemp || 35) - (minTemp || 15) || 1;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#0F0D1E' }}>
-      {/* 背景光晕装饰 */}
-      <Animated.View style={{
-        position: 'absolute', top: 0, right: 0, width: 192, height: 192, opacity: 0.4,
-        backgroundColor: 'transparent',
-        shadowColor: '#DAA520',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: haloOpacity1,
-        shadowRadius: haloRadius1,
-        elevation: 40,
-      }} />
-      <Animated.View style={{
-        position: 'absolute', bottom: '33%', left: 0, width: 160, height: 160, opacity: 0.3,
-        backgroundColor: 'transparent',
-        shadowColor: '#DAA520',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: haloOpacity2,
-        shadowRadius: haloRadius2,
-        elevation: 30,
-      }} />
+    <LinearGradient colors={bgColors} style={styles.container} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-      {/* ═══ 1. Weather Banner ═══ */}
-      <View style={styles.weatherBanner}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ fontSize: 15, color: '#fff', fontWeight: '500' }}>
-            {currentCity?.name || '北京'}
-          </Text>
-          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
-            更新时间 {Math.floor(Math.random() * 60)}分钟前
-          </Text>
-        </View>
-        <Text style={{ fontSize: 48, fontWeight: '300', color: '#fff', letterSpacing: -0.3, marginTop: 8 }}>
-          {Math.round(nowWeather?.temp || 25)}°
-        </Text>
-        <View style={{ flexDirection: 'row', gap: 16, marginTop: 4 }}>
-          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
-            {nowWeather?.text || '晴间多云'}
-          </Text>
-          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
-            H:{Math.round(nowWeather?.tempMax || 32)}°
-          </Text>
-          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
-            L:{Math.round(nowWeather?.tempMin || 18)}°
-          </Text>
-        </View>
-      </View>
-
-      {/* ═══ 2. 今日光质时间轴 ═══ */}
-      <View style={styles.glassCard}>
-        <Text style={styles.sectionTitle}>今日光质</Text>
-        {/* 时间标签 */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          {['05:30', '08:30', '12:00', '17:30', '19:00', '19:45'].map((t, i) => (
-            <Text key={i} style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{t}</Text>
-          ))}
-        </View>
-        {/* 时间轴色条 */}
-        <View style={{
-          height: 20, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 10,
-          marginVertical: 4, position: 'relative', overflow: 'hidden'
-        }}>
-          <View style={{ position: 'absolute', left: '0%', top: 0, height: '100%', width: '15%', backgroundColor: 'rgba(91,108,249,0.7)' }} />
-          <View style={{ position: 'absolute', left: '15%', top: 0, height: '100%', width: '45%', backgroundColor: 'rgba(255,214,10,0.5)' }} />
-          <View style={{ position: 'absolute', left: '60%', top: 0, height: '100%', width: '20%', backgroundColor: 'rgba(255,184,0,0.9)' }} />
-          <View style={{ position: 'absolute', left: '80%', top: 0, height: '100%', width: '20%', backgroundColor: 'rgba(91,108,249,0.7)' }} />
-          {/* 当前时间指示器 */}
-          <View style={{ position: 'absolute', top: -3, left: '45%', width: 10, height: 26, backgroundColor: '#fff', borderRadius: 5 }} />
-        </View>
-        {/* 图例 */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFB800' }} />
-            <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>黄金 17:30-19:00</Text>
-            <Text style={{ fontSize: 13, color: '#FFB800' }}>⏱2h34m</Text>
+        {/* ═══ 1. 天气横幅 ═══ */}
+        <View style={styles.weatherBanner}>
+          <View style={styles.bannerHeader}>
+            <Text style={styles.bannerCity}>{currentCity?.name || '北京'}</Text>
+            <Text style={styles.bannerUpdate}>实时更新</Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#5B6CF9' }} />
-            <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>蓝调 19:00-19:45</Text>
+          <View style={styles.bannerMain}>
+            <Text style={styles.bannerTemp}>{temp}°</Text>
+            <View style={styles.bannerCondition}>
+              <Ionicons name={getWeatherIconName(nowWeather?.text)} size={20} color={getWeatherIconColor(nowWeather?.text)} />
+              <Text style={styles.bannerConditionText}>{nowWeather?.text || '晴间多云'}</Text>
+            </View>
+          </View>
+          <View style={styles.bannerHiLo}>
+            <Text style={styles.bannerHiLoText}>H:{Math.round(nowWeather?.tempMax || 32)}°  L:{Math.round(nowWeather?.tempMin || 18)}°</Text>
+            <Text style={styles.bannerFeels}>体感 {Math.round(parseInt(nowWeather?.feelsLike) || temp)}°</Text>
           </View>
         </View>
-      </View>
 
-      {/* ═══ 3. 7天详细预报 ═══ */}
-      <View style={styles.glassCard}>
-        <Text style={styles.sectionTitle}>7天预报</Text>
-        {(dailyForecast || []).slice(0, 7).map((day, i) => {
-          const low = parseInt(day.tempMin) || 0;
-          const high = parseInt(day.tempMax) || 0;
-          const range = (maxTemp || 35) - (minTemp || 15) || 1;
-          return (
-            <View key={i} style={[styles.dayDetailRow, i === 6 && { borderBottomWidth: 0 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ width: 40, fontSize: 14, color: '#fff' }}>
-                  {day.day || (day.fxDate ? day.fxDate.slice(5) : '--')}
-                </Text>
-                <Text style={{ width: 28, fontSize: 18, textAlign: 'center' }}>
-                  {getWeatherEmoji(day.textDay || day.text)}
-                </Text>
-                <View style={{
-                  flex: 1, height: 4, backgroundColor: 'rgba(255,255,255,0.1)',
-                  borderRadius: 2, overflow: 'hidden', position: 'relative'
-                }}>
-                  <View style={{
-                    position: 'absolute',
-                    left: `${((low - (minTemp || 15)) / range) * 100}%`,
-                    top: 0, height: 4,
-                    width: `${((high - low) / range) * 100}%`,
-                    backgroundColor: '#FFB800', borderRadius: 2
-                  }} />
+        {/* ═══ 2. 光质时间轴 ═══ */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="time-outline" size={16} color={Accent.star} />
+            <Text style={styles.cardTitle}>今日光质</Text>
+          </View>
+          {/* 时间段 */}
+          <View style={styles.timelineLabels}>
+            {['05:30', '08:30', '12:00', '17:30', '19:00', '19:45'].map((t, i) => (
+              <Text key={i} style={styles.timelineLabel}>{t}</Text>
+            ))}
+          </View>
+          {/* 色条 */}
+          <View style={styles.timelineBar}>
+            <View style={[styles.timelineSegment, { left: '0%', width: '15%', backgroundColor: 'rgba(96,165,250,0.6)' }]} />
+            <View style={[styles.timelineSegment, { left: '15%', width: '45%', backgroundColor: 'rgba(255,215,0,0.35)' }]} />
+            <View style={[styles.timelineSegment, { left: '60%', width: '20%', backgroundColor: 'rgba(255,215,0,0.7)' }]} />
+            <View style={[styles.timelineSegment, { left: '80%', width: '20%', backgroundColor: 'rgba(96,165,250,0.6)' }]} />
+            <View style={styles.timelineCursor} />
+          </View>
+          {/* 图例 */}
+          <View style={styles.timelineLegend}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: Accent.star }]} />
+              <Text style={styles.legendText}>黄金时刻 17:30-19:00</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#60A5FA' }]} />
+              <Text style={styles.legendText}>蓝调时刻 19:00-19:45</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ═══ 3. 7天预报 ═══ */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="calendar-outline" size={16} color={Accent.aurora} />
+            <Text style={styles.cardTitle}>7天预报</Text>
+          </View>
+          {forecastData.slice(0, 7).map((day, i) => (
+            <View key={i} style={[styles.dayRow, i === 6 && { borderBottomWidth: 0 }]}>
+              <View style={styles.dayMain}>
+                <Text style={styles.dayName}>{day.day}</Text>
+                <Text style={styles.dayDate}>{day.date}</Text>
+                <Ionicons name={day.icon} size={18} color={getWeatherIconColor(day.condition)} style={styles.dayIcon} />
+                {/* 温度条 */}
+                <View style={styles.tempBarBg}>
+                  <View style={[styles.tempBarFill, {
+                    left: `${((day.low - minTemp) / range) * 100}%`,
+                    width: `${((day.high - day.low) / range) * 100}%`,
+                  }]} />
                 </View>
-                <Text style={{ width: 28, fontSize: 14, color: '#fff', textAlign: 'right' }}>
-                  {Math.round(high)}°
-                </Text>
-                <Text style={{ width: 28, fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>
-                  {Math.round(low)}°
-                </Text>
+                <Text style={styles.dayHigh}>{day.high}°</Text>
+                <Text style={styles.dayLow}>{day.low}°</Text>
               </View>
-              {/* 子行：降水 + 云量 */}
-              <View style={{ flexDirection: 'row', gap: 16, paddingLeft: 76 }}>
-                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-                  💧 {day.precip || day.rain || '--'}%
-                </Text>
-                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-                  ☁️ {day.cloud || day.cloudCover || '--'}%
-                </Text>
+              <View style={styles.daySub}>
+                <View style={styles.daySubItem}>
+                  <Ionicons name="water-outline" size={12} color={TextColor.muted} />
+                  <Text style={styles.daySubText}>{day.rain || '--'}%</Text>
+                </View>
+                <View style={styles.daySubItem}>
+                  <Ionicons name="cloud-outline" size={12} color={TextColor.muted} />
+                  <Text style={styles.daySubText}>{day.wind}</Text>
+                </View>
               </View>
             </View>
-          );
-        })}
-      </View>
+          ))}
+        </View>
 
-      {/* ═══ 4. 环境指数 2×2 网格 ═══ */}
-      <View style={styles.glassCard}>
-        <Text style={styles.sectionTitle}>环境指数</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          <View style={{ width: '48%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 10 }}>
-            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>AQI</Text>
-            <Text style={{ fontSize: 20, fontWeight: '600', color: getAqiColor(aqiData?.aqi) }}>
-              {aqiData?.aqi || '--'}
-            </Text>
-            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
-              {aqiData?.category || '--'}
-            </Text>
+        {/* ═══ 4. 环境指数 ═══ */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="leaf-outline" size={16} color={Accent.success} />
+            <Text style={styles.cardTitle}>环境指数</Text>
           </View>
-          <View style={{ width: '48%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 10 }}>
-            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>UV</Text>
-            <Text style={{ fontSize: 20, fontWeight: '600', color: '#FFD60A' }}>
-              {uvData?.uvIndex || '--'}
-            </Text>
-            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
-              {uvData?.level || '--'}
-            </Text>
-          </View>
-          <View style={{ width: '48%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 10 }}>
-            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>湿度</Text>
-            <Text style={{ fontSize: 20, fontWeight: '600', color: '#fff' }}>
-              {nowWeather?.humidity || '--'}%
-            </Text>
-            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>舒适</Text>
-          </View>
-          <View style={{ width: '48%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 10 }}>
-            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>风速</Text>
-            <Text style={{ fontSize: 20, fontWeight: '600', color: '#fff' }}>
-              {nowWeather?.windScale || '--'}级
-            </Text>
-            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
-              {nowWeather?.windDir || '--'}
-            </Text>
+          <View style={styles.envGrid}>
+            <EnvItem label="AQI" value={aqiData?.aqi || '--'} sub={aqiData?.category || '--'} color={getAqiColor(aqiData?.aqi)} icon="skull-outline" />
+            <EnvItem label="UV" value={uvData?.uvIndex || '--'} sub={uvData?.level || '--'} color={Accent.star} icon="sunny-outline" />
+            <EnvItem label="湿度" value={`${nowWeather?.humidity || '--'}%`} sub="舒适" color={TextColor.primary} icon="water-outline" />
+            <EnvItem label="风速" value={`${nowWeather?.windScale || '--'}级`} sub={nowWeather?.windDir || '--'} color={TextColor.primary} icon="speedometer-outline" />
           </View>
         </View>
-      </View>
 
-      {/* 底部留白 */}
-      <View style={{ height: 40 }} />
-    </ScrollView>
+        {/* 底部留白 */}
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
-// ─── 样式表 ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════
+// 子组件
+// ═══════════════════════════════════════════
+
+function EnvItem({ label, value, sub, color, icon }) {
+  return (
+    <View style={styles.envItem}>
+      <View style={styles.envItemHeader}>
+        <Ionicons name={icon} size={14} color={TextColor.muted} />
+        <Text style={styles.envItemLabel}>{label}</Text>
+      </View>
+      <Text style={[styles.envItemValue, { color }]}>{value}</Text>
+      <Text style={styles.envItemSub}>{sub}</Text>
+    </View>
+  );
+}
+
+// ═══════════════════════════════════════════
+// 样式表
+// ═══════════════════════════════════════════
 
 const styles = StyleSheet.create({
+  container: { flex: 1 },
+  scrollContent: { paddingBottom: 100 },
+
+  // ── 天气横幅 ──
   weatherBanner: {
     marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.sm,
-    backgroundColor: Surface.Surface1,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.md,
+    backgroundColor: 'rgba(18, 18, 26, 0.50)',
     borderRadius: Radius.lg,
     padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: whiteAlpha(0.06),
-  },
-  glassCard: {
-    backgroundColor: 'rgba(18, 24, 42, 0.75)',
-    borderRadius: Radius.lg,
     borderWidth: 0.5,
     borderColor: whiteAlpha(0.06),
-    padding: Spacing.lg,
+  },
+  bannerHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  },
+  bannerCity: {
+    fontSize: FontSize.body,
+    color: TextColor.primary,
+    fontWeight: FontWeight.medium,
+  },
+  bannerUpdate: {
+    fontSize: FontSize.micro,
+    color: TextColor.muted,
+  },
+  bannerMain: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    marginTop: Spacing.md,
+  },
+  bannerTemp: {
+    fontSize: FontSize.display,
+    fontWeight: FontWeight.light,
+    color: TextColor.primary,
+    letterSpacing: -1,
+  },
+  bannerCondition: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+  },
+  bannerConditionText: {
+    fontSize: FontSize.body,
+    color: TextColor.primary,
+    fontWeight: FontWeight.medium,
+  },
+  bannerHiLo: {
+    flexDirection: 'row', gap: 12,
+    marginTop: Spacing.xs,
+  },
+  bannerHiLoText: {
+    fontSize: FontSize.caption,
+    color: TextColor.secondary,
+  },
+  bannerFeels: {
+    fontSize: FontSize.caption,
+    color: TextColor.muted,
+  },
+
+  // ── 卡片 ──
+  card: {
+    ...CardStyle,
     marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
   },
-  sectionTitle: {
-    fontSize: FontSize.h2,
+  cardHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginBottom: Spacing.md,
+  },
+  cardTitle: {
+    fontSize: FontSize.h3,
     fontWeight: FontWeight.semiBold,
-    color: TextColor.Primary,
-    marginBottom: Spacing.sm,
+    color: TextColor.primary,
+    letterSpacing: 0.3,
   },
-  dayDetailRow: {
+
+  // ── 时间轴 ──
+  timelineLabels: {
+    flexDirection: 'row', justifyContent: 'space-between',
+  },
+  timelineLabel: {
+    fontSize: FontSize.micro,
+    color: TextColor.muted,
+    fontFamily: FontFamily.mono,
+  },
+  timelineBar: {
+    height: 20,
+    backgroundColor: whiteAlpha(0.06),
+    borderRadius: Radius.full,
+    marginVertical: Spacing.xs,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  timelineSegment: {
+    position: 'absolute', top: 0, height: '100%',
+  },
+  timelineCursor: {
+    position: 'absolute', top: -3,
+    left: '45%', width: 10, height: 26,
+    backgroundColor: TextColor.primary,
+    borderRadius: 5,
+  },
+  timelineLegend: {
+    flexDirection: 'row', gap: 16, marginTop: Spacing.sm,
+  },
+  legendItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+  },
+  legendDot: {
+    width: 8, height: 8, borderRadius: 4,
+  },
+  legendText: {
+    fontSize: FontSize.caption,
+    color: TextColor.secondary,
+  },
+
+  // ── 7天预报 ──
+  dayRow: {
     borderBottomWidth: 0.5,
     borderBottomColor: whiteAlpha(0.06),
     paddingVertical: Spacing.sm,
-    gap: 4,
   },
-  tempCurveContainer: { height: 60, marginVertical: Spacing.sm, position: 'relative' },
-  tempCurveDotHigh: { width: 8, height: 8, borderRadius: 4, backgroundColor: Brand.Gold, position: 'absolute' },
-  tempCurveDotLow: { width: 8, height: 8, borderRadius: 4, backgroundColor: Accent.FrostCyan, position: 'absolute' },
-  dayCard: {
-    backgroundColor: Surface.Surface2, borderRadius: Radius.md, padding: Spacing.md,
-    marginRight: Spacing.sm, minWidth: 80, alignItems: 'center',
-    borderWidth: 1, borderColor: whiteAlpha(0.05),
+  dayMain: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
   },
-  dayCardActive: { borderColor: Brand.Gold, transform: [{ scale: 1.05 }] },
-  dayCardEmoji: { fontSize: 24, marginVertical: 4 },
-  dayCardName: { fontSize: FontSize.micro, color: TextColor.Tertiary, fontWeight: FontWeight.medium },
-  dayCardTempHi: { fontSize: FontSize.body, color: TextColor.Primary, fontWeight: FontWeight.semiBold },
-  dayCardTempLo: { fontSize: FontSize.caption, color: TextColor.Tertiary, marginTop: 1 },
-  dayCardTempBar: { width: '80%', height: 3, backgroundColor: whiteAlpha(0.1), borderRadius: 1.5, marginTop: 4, overflow: 'hidden' },
-  dayCardTempFill: { height: 3, backgroundColor: Brand.Gold, borderRadius: 1.5, position: 'absolute', top: 0 },
-  envItem: { width: '48%', backgroundColor: Surface.Surface2, borderRadius: Radius.md, padding: Spacing.md },
-  envItemLabel: { fontSize: FontSize.caption, color: TextColor.Tertiary },
-  envItemValue: { fontSize: FontSize.h2, fontWeight: FontWeight.semiBold, color: TextColor.Primary },
-  envItemSub: { fontSize: FontSize.micro, color: TextColor.Tertiary },
+  dayName: {
+    width: 40,
+    fontSize: FontSize.body,
+    color: TextColor.primary,
+    fontWeight: FontWeight.medium,
+  },
+  dayDate: {
+    width: 36,
+    fontSize: FontSize.caption,
+    color: TextColor.muted,
+  },
+  dayIcon: {
+    width: 24, textAlign: 'center',
+  },
+  tempBarBg: {
+    flex: 1, height: 4,
+    backgroundColor: whiteAlpha(0.08),
+    borderRadius: 2,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  tempBarFill: {
+    position: 'absolute', top: 0, height: 4,
+    backgroundColor: Accent.star, borderRadius: 2,
+  },
+  dayHigh: {
+    width: 32,
+    fontSize: FontSize.body,
+    color: TextColor.primary,
+    fontWeight: FontWeight.semiBold,
+    textAlign: 'right',
+  },
+  dayLow: {
+    width: 32,
+    fontSize: FontSize.caption,
+    color: TextColor.muted,
+    textAlign: 'right',
+  },
+  daySub: {
+    flexDirection: 'row', gap: 16,
+    paddingLeft: 86,
+    marginTop: 4,
+  },
+  daySubItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+  },
+  daySubText: {
+    fontSize: FontSize.micro,
+    color: TextColor.muted,
+  },
+
+  // ── 环境指数 ──
+  envGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm,
+  },
+  envItem: {
+    width: '48%',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+  },
+  envItemHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginBottom: 4,
+  },
+  envItemLabel: {
+    fontSize: FontSize.caption,
+    color: TextColor.muted,
+  },
+  envItemValue: {
+    fontSize: FontSize.h2,
+    fontWeight: FontWeight.semiBold,
+  },
+  envItemSub: {
+    fontSize: FontSize.micro,
+    color: TextColor.muted,
+    marginTop: 2,
+  },
 });

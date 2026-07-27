@@ -1,14 +1,13 @@
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EarthIcon, PartlySunnyIcon, CameraIcon, PersonIcon } from '../../components/icons/TabIcons';
+import { Accent, TextColor, auroraAlpha } from '../../styles/designTokens';
 
 /**
- * 底部导航布局
- * Note: Expo Router automatically code-splits each tab route file.
- * Additional lazy loading is applied within individual tab components
- * for their heavy dependencies (images, third-party libs, etc.)
+ * 底部导航布局 — v2.1 Aurora 极光主题
+ * 选中态带极光光晕，图标呼吸感
  */
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
@@ -16,86 +15,102 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: '#DAA520',
-        tabBarInactiveTintColor: 'rgba(255,255,255,0.35)',
+      screenOptions={({ route }) => ({
+        tabBarActiveTintColor: Accent.aurora,
+        tabBarInactiveTintColor: 'rgba(148, 163, 184, 0.45)',
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: 'rgba(15,13,30,0.85)',
+          backgroundColor: 'rgba(11, 11, 16, 0.92)',
           borderTopWidth: 1,
-          borderTopColor: 'rgba(218,165,32,0.12)',
-          paddingBottom: isIOS ? 6 + insets.bottom : 6,
-          paddingTop: 6,
-          height: isIOS ? 58 + insets.bottom : 58,
+          borderTopColor: auroraAlpha(0.08),
+          paddingBottom: isIOS ? 8 + insets.bottom : 8,
+          paddingTop: 8,
+          height: isIOS ? 64 + insets.bottom : 64,
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
           elevation: 0,
-          // 毛玻璃效果
-          backdropFilter: 'blur(20px)',
-          shadowColor: '#DAA520',
-          shadowOffset: { width: 0, height: -1 },
-          shadowOpacity: 0.1,
-          shadowRadius: 10,
+          // 极光底部微光
+          shadowColor: Accent.aurora,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 16,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '600',
-          letterSpacing: 0.3,
+          letterSpacing: 0.5,
+          marginTop: 2,
         },
         tabBarItemStyle: {
           paddingVertical: 2,
-          // Ensure touch target ≥ 44px
           minHeight: 44,
         },
-      }}
+        // 自定义 Tab 图标容器 — 选中时添加光晕背景
+        tabBarIcon: ({ focused, color, size }) => {
+          let Icon;
+          switch (route.name) {
+            case 'index':
+              Icon = EarthIcon;
+              break;
+            case 'forecast':
+              Icon = PartlySunnyIcon;
+              break;
+            case 'community':
+              Icon = CameraIcon;
+              break;
+            case 'profile':
+              Icon = PersonIcon;
+              break;
+            default:
+              Icon = EarthIcon;
+          }
+          return (
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+              {focused && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: auroraAlpha(0.08),
+                    shadowColor: Accent.aurora,
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 8,
+                  }}
+                />
+              )}
+              <Icon size={focused ? size + 1 : size} color={color} />
+            </View>
+          );
+        },
+      })}
     >
-      {/* 首页 - 地球仪 */}
       <Tabs.Screen
         name="index"
         options={{
-          title: '首页',
-          tabBarIcon: ({ color, size }) => (
-            <EarthIcon size={size} color={color} />
-          ),
-          headerTitle: '玩天气',
+          title: '观测',
         }}
       />
-
-      {/* 预报页 */}
       <Tabs.Screen
         name="forecast"
         options={{
           title: '预报',
-          tabBarIcon: ({ color, size }) => (
-            <PartlySunnyIcon size={size} color={color} />
-          ),
-          headerTitle: '天气预报',
         }}
       />
-
-      {/* 社区页 */}
       <Tabs.Screen
         name="community"
         options={{
           title: '社区',
-          tabBarIcon: ({ color, size }) => (
-            <CameraIcon size={size} color={color} />
-          ),
-          headerTitle: '实拍社区',
         }}
       />
-
-      {/* 个人页 */}
       <Tabs.Screen
         name="profile"
         options={{
           title: '我的',
-          tabBarIcon: ({ color, size }) => (
-            <PersonIcon size={size} color={color} />
-          ),
-          headerTitle: '个人中心',
         }}
       />
     </Tabs>

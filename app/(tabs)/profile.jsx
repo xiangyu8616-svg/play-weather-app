@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Brand, Accent, Surface, TextColor, Spacing, Radius, FontSize, FontWeight, goldAlpha, whiteAlpha, skyBlueAlpha } from '../../styles/designTokens';
+import { Accent, Bg, TextColor, Spacing, Radius, FontSize, FontWeight, Surface, Brand, goldAlpha, auroraAlpha, whiteAlpha } from '../../styles/designTokens';
 import { loadSettings, saveSettings } from '../../services/settingsService';
 
 export default function ProfileScreen() {
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
 
   // 数据来源
   dataSource: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: 14 },
-  dataSourceText: { fontSize: FontSize.caption, color: TextColor.Tertiary },
+  dataSourceText: { fontSize: FontSize.caption, color: TextColor.secondary },
 
   // 设置列表行
   settingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
@@ -309,10 +309,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,55,95,0.08)', borderWidth: 1, borderColor: 'rgba(255,55,95,0.2)',
     borderRadius: Radius.lg, paddingVertical: 14, marginTop: Spacing.xs, marginBottom: Spacing.md,
   },
-  logoutText: { fontSize: FontSize.body, color: Accent.SunsetOrange, fontWeight: FontWeight.medium },
+  logoutText: { fontSize: FontSize.body, color: Accent.danger, fontWeight: FontWeight.medium },
 
   // 底部
   footer: { alignItems: 'center', paddingVertical: Spacing.lg },
-  footerText: { fontSize: FontSize.caption, color: TextColor.Disabled },
-  footerCopy: { fontSize: FontSize.micro, color: TextColor.Disabled, marginTop: 4 },
+  footerText: { fontSize: FontSize.caption, color: TextColor.muted },
+  footerCopy: { fontSize: FontSize.micro, color: TextColor.muted, marginTop: 4 },
 });
+;
+;

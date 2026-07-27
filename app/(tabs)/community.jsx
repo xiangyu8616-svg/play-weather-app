@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Brand, TextColor, Spacing, Radius, FontSize, FontWeight, goldAlpha, whiteAlpha } from '../../styles/designTokens';
+import { Accent, TextColor, Spacing, Radius, FontSize, FontWeight, Brand, goldAlpha, whiteAlpha } from '../../styles/designTokens';
 
 export default function CommunityScreen() {
   const router = useRouter();

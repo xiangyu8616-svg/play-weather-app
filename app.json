@@ -5,14 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "userInterfaceStyle": "dark",
     "scheme": "playweather",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#DAA520"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.playweather.app"
@@ -20,7 +14,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#DAA520"
+        "backgroundColor": "#0B0B10"
       },
       "package": "com.playweather.app"
     },
