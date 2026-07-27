@@ -38,3 +38,21 @@ S0 完成 4/8 项。明日优先：
 2. ⬜ 收敛重复组件 `components/WeatherCard.jsx`（0.6）
 3. ⬜ 提醒老朱注册 Apple/Google 开发者账号（0.7，Google Play 有封闭测试时间门槛）
 4. 可并行启动：Supabase 项目初始化调研（S1.1）
+
+---
+
+## 2026-07-27 晚间补记（20:45，Kimi Work 手动追加）
+
+**【密钥轮换——已完成大半】**（8点自动日志后发生，故补记）
+- 通过 WebBridge 直接操作老朱已登录的和风控制台，在项目「玩天气」(4N2B2VEN82) 下新建两个凭据：
+  - `prod-bff`：JWT (Ed25519)，凭据ID/kid=**K6B8EKE6JU**，公钥SHA256=c2a7ebd6...6127（与本地私钥配对验证一致）
+  - `dev-local`：API KEY，凭据ID=**TFWG3NEFN5**，Key 已写入本地 `config/apiKeys.js`（不进git）并实测返回真实数据
+- 两个凭据均限制为 8 个必需 API（GeoAPI/天气预报/分钟降水/空气质量/热带气旋/天气预警/天气指数/天文）；热带气旋无免费额度（计费警告已确认，台风路径功能需要）
+- 私钥存本地 `secrets/ed25519-private.pem`（已被 .gitignore 忽略）；**切勿提交、切勿外发**
+- 旧凭据共 3 个待删：玩天气/天气应用(TH59QRQ6EY)、天气2/new(TNPKF2T39E)、天气2/play-weather(T7WKCKUNX5)
+
+**【明日起点（更新）】**
+1. `api/weather.js` 加 Ed25519 JWT 签名（kid=K6B8EKE6JU，sub=项目ID 4N2B2VEN82，私钥从 Vercel 环境变量读）
+2. Vercel 环境变量配置（可用 WebBridge 操作老朱 Chrome 上的 Vercel 后台）
+3. 线上验证通过后，删除 3 个旧凭据（不可逆，需老朱确认；提前删会断线上网页版）
+4. 收敛重复组件 WeatherCard.jsx（S0.6）
