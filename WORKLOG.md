@@ -24,6 +24,7 @@
 - 新增 `WORKLOG.md`：本文件
 - 修改 `.env.example`：真实 Key 替换为占位符，补禁止填真实值的警告注释
 - git 提交 `81b155f`：停止追踪 `config/apiKeys.js`（本地文件保留）
+- git 提交 `69402c6`：`.gitignore` 新增 `secrets/` 目录忽略（防止本地 JWT 密钥等敏感文件误提交）
 
 **【研究与决策】**
 - 后端选型决策：**Supabase**（Postgres+Auth OTP，与 Vercel serverless 共存），优于 Firebase 的理由：国内可控访问、SQL 灵活、收藏/帖子/用户三表起步成本低
