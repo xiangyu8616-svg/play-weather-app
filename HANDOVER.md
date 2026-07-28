@@ -6,6 +6,8 @@
 > **项目路径**: `C:\Users\xiangyu\.easyclaw\workspace\play-weather-app`
 >
 > **修订记录**:
+> - v3（2026-07-28，Kimi Work）：补充 `lib/`、`supabase/`、`scripts/` 目录，删除已收敛的 WeatherCard 重复项，
+>   后端状态更新为"schema 已就绪，待创建 Supabase 项目"。
 > - v2（2026-07-27，Kimi Work）：修正目录结构失真（补 `api/`、`docs/`），密钥全部脱敏，
 >   更新安全事项状态，后端状态从"无"更正为"BFF 骨架已存在"。
 > - v1（2026-07-27，麻辣龙虾）：初版。
@@ -73,7 +75,12 @@ play-weather-app/
 │   ├── animations/FadeInView.jsx # 淡入动画组件
 │   ├── AstroPanel.jsx            # 天文信息面板
 │   ├── PhotoTimingPanel.jsx      # 摄影时间面板
-│   └── WeatherCard.jsx           # ⚠️ 与 weather/WeatherCard.jsx 重复，待收敛
+│   └── WeatherCard.jsx           # ⚠️ 与 weather/WeatherCard.jsx 重复，已收敛删除（2026-07-28）
+│
+├── lib/
+│   └── supabase.js               # ⭐ Supabase 客户端封装（OTP/用户资料/收藏/帖子）
+│
+├── services/                     # 业务逻辑层
 │
 ├── services/                     # 业务逻辑层
 │   ├── weather/                  # qweatherService.js（API封装18KB）+ weatherService.ts + index.ts
@@ -100,6 +107,14 @@ play-weather-app/
 │   ├── design-forecast-community.md
 │   ├── 算法说明文档.md
 │   └── 进度日志.md
+│
+├── supabase/                     # ⭐ 后端 Schema（S1.1 已就绪）
+│   ├── migrations/001_initial_schema.sql  # profiles/saved_locations/posts 三表 + RLS
+│   └── README.md                 # 项目创建/配置/迁移指南
+│
+├── scripts/                      # 工具脚本
+│   ├── verify-jwt.py             # JWT 签名结构验证（Python）
+│   └── prepare-vercel-env.py     # Vercel 环境变量配置辅助（PEM 单行化）
 │
 ├── assets/                       # 图标/启动屏/favicon
 ├── app.json                      # Expo配置（已移除newArchEnabled/splash）
@@ -138,7 +153,7 @@ play-weather-app/
 |------|------|------|--------|
 | 社区功能 | `app/(tabs)/community.jsx` | 100%缺失 | 🔴 P0 |
 | 用户系统 | `api/auth/`有骨架，无前端UI | 缺注册/登录页面 | 🔴 P0 |
-| 后端服务 | `api/`（BFF骨架已存在） | 天气代理+验证码已有；缺数据库/用户/收藏/帖子 | 🔴 P0 |
+| 后端服务 | `api/`（BFF骨架）+ `supabase/`（schema已就绪） | 天气代理+验证码已有；数据库schema就绪（profiles/saved_locations/posts+RLS），待创建Supabase项目并执行migration | 🔴 P0 |
 | 收藏地点 | `profile.jsx`硬编码 | 无真实数据 | 🔴 P0 |
 | 推送通知 | 有开关无服务 | 需FCM/APNs | 🟡 P1 |
 | 小时级预报 | 缓存层已预留`hourly`TTL | 缺服务调用+UI组件 | 🟡 P1 |

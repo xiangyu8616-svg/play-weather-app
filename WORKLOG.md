@@ -89,3 +89,39 @@ S0 完成 6/8 项（0.1–0.4、0.6 完成，0.5 代码就绪待 Vercel 配置�
 2. ⏳ 线上验证 JWT 签名后，提醒老朱删除 3 个旧凭据（不可逆，确认线上网页版不再依赖）
 3. ⬜ 老朱注册 Apple Developer + Google Play 开发者账号（0.7）
 4. 可并行启动：Supabase 项目创建 +  schema 设计（S1.1）
+
+---
+
+## 2026-07-28 晚间补记（20:00，S1.1 落地）
+
+**【起点】**
+承接白天日志终点：S0 完成 6/8，api/weather.js JWT 签名已就绪，待 Vercel 配环境变量；S1.1 Supabase 尚未启动。
+
+**【完成工作】**
+1. S1.1 Supabase 后端选型落地：设计 profiles / saved_locations / posts 三表 schema，含 RLS 行级安全策略
+2. 编写 `lib/supabase.js`（197行）：封装 OTP 登录/验证、用户资料 CRUD、收藏地点增删改查、社区帖子分页与创建
+3. 编写 `supabase/README.md`：从零注册到执行 migration 的完整操作指南（含 SMTP/Resend 配置）
+4. 编写 `supabase/migrations/001_initial_schema.sql`（137行）：三表定义 + 外键 + 唯一约束 + RLS policy
+5. 更新 `.env.example`：补充 `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` 模板
+6. 更新 `ROADMAP.md`：S1.1 状态更新为"Schema + 客户端 + 接入指南已就绪，待创建项目并执行 migration"
+7. 编写 `scripts/prepare-vercel-env.py`：读取本地 PEM 私钥并转为单行格式，输出 Vercel 环境变量配置清单（含 kid / projectId）
+
+**【文件调整】**
+- 新增 `lib/supabase.js`：Supabase 客户端封装，含 OTP/用户资料/收藏/帖子四类操作
+- 新增 `supabase/migrations/001_initial_schema.sql`：三表 schema + RLS 策略
+- 新增 `supabase/README.md`：Supabase 项目创建/配置/迁移指南
+- 新增 `scripts/prepare-vercel-env.py`：PEM 私钥转单行，输出 Vercel 环境变量配置命令
+- 修改 `.env.example`：补充 Supabase 环境变量占位符
+- 修改 `ROADMAP.md`：S1.1 状态推进
+
+**【研究与决策】**
+- Supabase Auth OTP 将替代自建 `api/auth/send-code.js` + `verify-code.js`（内存 Map 在 Vercel serverless 不可靠），S1 执行迁移
+- RLS 策略：profiles/saved_locations 仅本人可见；posts 已发布全员可读，CUD 仅本人
+- 社区帖子表 pre-build，S2 末启用，避免后期 schema 变更
+
+**【终点与明日起点】**
+S0 仍 6/8（0.5 待 Vercel 配置），S1.1 已就绪。明日优先：
+1. ⏳ WebBridge 操作老朱 Chrome 配 Vercel 环境变量（QWEATHER_ED25519_PRIVATE_KEY/KID/PROJECT_ID）
+2. ⬜ 老朱注册 Apple Developer + Google Play 开发者账号（0.7）
+3. ⬜ 老朱创建 Supabase 项目并执行 migration（按 README 步骤）
+4. ⬜ 安装 `@supabase/supabase-js` 到项目依赖
