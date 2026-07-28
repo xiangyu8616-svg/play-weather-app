@@ -165,7 +165,7 @@ play-weather-app/
 | 6 | `community.jsx`仅占位页 | `app/(tabs)/community.jsx` | 只有"即将上线"提示 |
 | 7 | 混合TS/JS代码风格 | 多个文件 | 部分文件有类型错误但未阻塞运行 |
 | 8 | 3D地球仪低端设备性能 | `components/globe/` | 可能卡顿，有optimized版本 |
-| 9 | 重复组件 | `components/WeatherCard.jsx` 与 `components/weather/WeatherCard.jsx` | 两处并存，需确认引用方后删除其一 |
+| 9 | 重复组件 | `components/WeatherCard.jsx` 与 `components/weather/WeatherCard.jsx` | ✅ 2026-07-28 已删除两处死代码，首页已内联所有 UI |
 
 ### 🟢 轻微
 
@@ -184,6 +184,11 @@ play-weather-app/
 **2026-07-27 安全处置进展**（Kimi Work）：
 
 - ✅ `config/apiKeys.js` 已停止 git 追踪（`git rm --cached`，提交 `81b155f`），真实Key仅存本地文件
+- ✅ `.env.example` 已脱敏（原文件含真实Key且已提交进git）
+- ✅ **Ed25519 JWT 签名已落地**：`api/weather.js` 支持 JWT（kid=K6B8EKE6JU）和 API KEY 双模式回退；Python 脚本验证签名结构通过（64字节 Ed25519）
+- ⚠️ **仍未完成**：历史提交中包含两个明文Key（一个开发Key、一个企业版Key）
+- ⏳ **待 Vercel 配置**：在 Vercel Dashboard 中设置 `QWEATHER_ED25519_PRIVATE_KEY`、`QWEATHER_KID`、`QWEATHER_PROJECT_ID`
+- ❗ **待人工确认**：旧凭据（玩天气/天气应用/天气2）是否还在使用线上网页版，确认后可删除
 - ✅ `.env.example` 已脱敏（原文件含真实Key且已提交进git）
 - ⚠️ **仍未完成**：历史提交中包含两个明文Key（一个开发Key、一个企业版Key）
 - ❗ **待人工操作**：登录和风控制台 → 作废旧Key → 重新生成两套（本地开发/线上白名单）→ 更新本地 `config/apiKeys.js` 和 Vercel 环境变量。轮换后旧Key失效，历史泄露风险自然消除（私有仓库不必重写git历史）

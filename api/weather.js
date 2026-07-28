@@ -1,14 +1,20 @@
 /**
  * 天气 API 代理 — 和风天气 BFF 层
- * 
+ *
  * 职责：
- * 1. 从环境变量读取 QWEATHER_API_KEY，避免前端暴露
- * 2. 转发前端请求到和风天气 API
- * 3. 简单缓存（内存 Map，生产环境应换 Redis）
- * 4. 请求频率限制
- * 
- * 环境变量：QWEATHER_API_KEY, QWEATHER_BASE_URL (默认 https://api.qweather.com/v7)
+ * 1. 从环境变量读取密钥，避免前端暴露
+ * 2. 支持 Ed25519 JWT 签名（推荐）和 API KEY 回退
+ * 3. 转发前端请求到和风天气 API
+ * 4. 简单缓存（内存 Map，生产环境应换 Redis）
+ * 5. 请求频率限制
+ *
+ * 环境变量（二选一）：
+ *   - 推荐：QWEATHER_ED25519_PRIVATE_KEY + QWEATHER_KID + QWEATHER_PROJECT_ID
+ *   - 回退：QWEATHER_API_KEY
+ *   - QWEATHER_BASE_URL（默认 https://api.qweather.com/v7）
  */
+
+import { SignJWT, importPKCS8 } from 'jose';
 
 // 简单内存缓存（生产环境请换 Redis）
 const cache = new Map();
@@ -40,6 +46,42 @@ function checkRateLimit(ip) {
   return true;
 }
 
+// JWT 签名缓存（避免每次请求都重新签名）
+let jwtCache = { token: null, expiresAt: 0 };
+const JWT_LEEWAY_MS = 60 * 1000; // 提前 1 分钟刷新
+
+async function getSignedJWT() {
+  const privateKeyPem = process.env.QWEATHER_ED25519_PRIVATE_KEY;
+  const kid = process.env.QWEATHER_KID;
+  const projectId = process.env.QWEATHER_PROJECT_ID;
+
+  if (!privateKeyPem || !kid || !projectId) {
+    return null;
+  }
+
+  const now = Date.now();
+  if (jwtCache.token && jwtCache.expiresAt > now + JWT_LEEWAY_MS) {
+    return jwtCache.token;
+  }
+
+  try {
+    // PEM 中换行符可能被环境变量转义为 \n，需要还原
+    const normalizedPem = privateKeyPem.replace(/\\n/g, '\n');
+    const privateKey = await importPKCS8(normalizedPem, 'EdDSA');
+    const jwt = await new SignJWT({ sub: projectId })
+      .setProtectedHeader({ alg: 'EdDSA', kid })
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(privateKey);
+
+    jwtCache = { token: jwt, expiresAt: now + 55 * 60 * 1000 }; // 缓存 55 分钟
+    return jwt;
+  } catch (err) {
+    console.error('JWT sign error:', err.message);
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   // 仅允许 GET
   if (req.method !== 'GET') {
@@ -56,25 +98,31 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing parameter: location' });
   }
 
-  const apiKey = process.env.QWEATHER_API_KEY;
   const baseUrl = process.env.QWEATHER_BASE_URL || 'https://api.qweather.com/v7';
 
-  if (!apiKey) {
-    console.error('QWEATHER_API_KEY not set');
-    return res.status(500).json({ error: 'Server configuration error' });
+  // 优先 JWT，回退 API KEY
+  let authKey = await getSignedJWT();
+  let authMode = 'jwt';
+
+  if (!authKey) {
+    authKey = process.env.QWEATHER_API_KEY;
+    authMode = 'apikey';
+    if (!authKey) {
+      console.error('No auth configured (need Ed25519 private key or API key)');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
   }
 
-  // 构建缓存 key
-  const cacheKey = `${type || 'now'}:${location}:${lang || 'zh'}`;
+  // 构建缓存 key（按 auth 模式隔离，避免 JWT/APIKEY 混用缓存）
+  const cacheKey = `${authMode}:${type || 'now'}:${location}:${lang || 'zh'}`;
   const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return res.status(200).json(cached.data);
   }
 
   try {
-    // 默认获取实时天气
     const weatherType = type || 'weather/now';
-    const url = `${baseUrl}/${weatherType}?location=${encodeURIComponent(location)}&key=${apiKey}&lang=${lang || 'zh'}`;
+    const url = `${baseUrl}/${weatherType}?location=${encodeURIComponent(location)}&key=${authKey}&lang=${lang || 'zh'}`;
 
     const response = await fetch(url);
     const data = await response.json();
