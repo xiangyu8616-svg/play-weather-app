@@ -6,6 +6,8 @@
 > **项目路径**: `C:\Users\xiangyu\.easyclaw\workspace\play-weather-app`
 >
 > **修订记录**:
+> - v4（2026-07-28 晚间，Kimi Work）：补充 Vercel 环境变量配置进展（已配但项目未连 Git，待 CLI 部署），
+>   `vercel.json` 修复排除 `api/` 路径；6.1/6.2 安全事项更新。
 > - v3（2026-07-28，Kimi Work）：补充 `lib/`、`supabase/`、`scripts/` 目录，删除已收敛的 WeatherCard 重复项，
 >   后端状态更新为"schema 已就绪，待创建 Supabase 项目"。
 > - v2（2026-07-27，Kimi Work）：修正目录结构失真（补 `api/`、`docs/`），密钥全部脱敏，
@@ -79,8 +81,6 @@ play-weather-app/
 │
 ├── lib/
 │   └── supabase.js               # ⭐ Supabase 客户端封装（OTP/用户资料/收藏/帖子）
-│
-├── services/                     # 业务逻辑层
 │
 ├── services/                     # 业务逻辑层
 │   ├── weather/                  # qweatherService.js（API封装18KB）+ weatherService.ts + index.ts
@@ -196,17 +196,15 @@ play-weather-app/
 
 ### 6.1 API密钥（🔴 最高优先级安全事项）
 
-**2026-07-27 安全处置进展**（Kimi Work）：
+**2026-07-28 安全处置进展**（Kimi Work）：
 
 - ✅ `config/apiKeys.js` 已停止 git 追踪（`git rm --cached`，提交 `81b155f`），真实Key仅存本地文件
 - ✅ `.env.example` 已脱敏（原文件含真实Key且已提交进git）
 - ✅ **Ed25519 JWT 签名已落地**：`api/weather.js` 支持 JWT（kid=K6B8EKE6JU）和 API KEY 双模式回退；Python 脚本验证签名结构通过（64字节 Ed25519）
+- ✅ **Vercel 环境变量已配置**：`QWEATHER_ED25519_PRIVATE_KEY`、`QWEATHER_KID`（K6B8EKE6JU）、`QWEATHER_PROJECT_ID`（4N2B2VEN82）已在 Vercel Dashboard 设为 Production 环境
 - ⚠️ **仍未完成**：历史提交中包含两个明文Key（一个开发Key、一个企业版Key）
-- ⏳ **待 Vercel 配置**：在 Vercel Dashboard 中设置 `QWEATHER_ED25519_PRIVATE_KEY`、`QWEATHER_KID`、`QWEATHER_PROJECT_ID`
+- ⏳ **待 CLI 部署上线**：Vercel 项目当前未连接 Git，Redeploy 不会自动拉取最新代码；需执行 `npx vercel --prod`（或绑定 Git 后 push）才能让 `vercel.json` 修复和最新代码真正上线
 - ❗ **待人工确认**：旧凭据（玩天气/天气应用/天气2）是否还在使用线上网页版，确认后可删除
-- ✅ `.env.example` 已脱敏（原文件含真实Key且已提交进git）
-- ⚠️ **仍未完成**：历史提交中包含两个明文Key（一个开发Key、一个企业版Key）
-- ❗ **待人工操作**：登录和风控制台 → 作废旧Key → 重新生成两套（本地开发/线上白名单）→ 更新本地 `config/apiKeys.js` 和 Vercel 环境变量。轮换后旧Key失效，历史泄露风险自然消除（私有仓库不必重写git历史）
 
 **密钥的正确使用方式**（轮换后）：
 
@@ -220,12 +218,30 @@ export const QWEATHER_KEY = 'USE_BFF'; // 上线后走 api/weather.js 代理，�
 **文件**: `.env.example` → 复制为 `.env.local`（`.env*.local` 已被 .gitignore 忽略）
 
 ```bash
-QWEATHER_API_KEY=your_qweather_api_key_here   # 从 console.qweather.com 获取
-JWT_SECRET=<64字节随机串>                       # node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+# 和风天气（二选一，优先 JWT）
+QWEATHER_ED25519_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----
+<多行PEM>
+-----END PRIVATE KEY-----    # Ed25519 私钥（Vercel 环境变量需转单行 \n 分隔）
+QWEATHER_KID=your_kid_here   # 和风控制台凭据 ID，如 K6B8EKE6JU
+QWEATHER_PROJECT_ID=your_project_id_here  # 和风项目 ID，如 4N2B2VEN82
+QWEATHER_API_KEY=your_qweather_api_key_here   # API KEY 回退（可选）
 QWEATHER_BASE_URL=<企业版API域名>
+
+# JWT 认证（自建登录用，非和风）
+JWT_SECRET=<64字节随机串>    # node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+# Supabase（S1.1 已就绪，待创建项目）
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-### 6.3 Expo配置
+### 6.3 Vercel 部署注意事项
+
+- **项目未连接 Git**：当前 Vercel 项目 `play-weather-app` 未绑定 Git 仓库，`Redeploy` 只会重新打包已有代码，不会自动同步本地最新提交。
+- **正确上线方式**：执行 `npx vercel --prod`（需老朱登录 Vercel CLI）或在 Dashboard 中 `Import Git Repository` 绑定本仓库后 push 自动部署。
+- **vercel.json 已修复**：rewrite 规则排除 `api/` 路径，防止 SPA fallback 覆盖 `/api/weather` 等后端路由。
+
+### 6.4 Expo配置
 
 `app.json`：name=玩天气、scheme=playweather、深色模式、双端 bundle id = `com.playweather.app`、plugins=[expo-router]、experiments.typedRoutes=true。已移除 `newArchEnabled` 和 `splash` 字段（SDK 57不再支持）。
 
@@ -262,24 +278,25 @@ npm install --legacy-peer-deps
 
 ### 🔴 优先级最高（阻塞上线）
 
-1. **密钥轮换** — 和风控制台作废旧Key、生成新Key（人工操作，30分钟）
-2. **补全后端** — `api/` 骨架已存在；建议 Supabase：用户数据+收藏地点+帖子三张表起步
-3. **实现用户系统** — 邮箱/手机号+验证码登录页（复用 `api/auth/`）
-4. **收藏地点管理** — 增删改查，AsyncStorage快照+Supabase同步
-5. **前端全量切BFF** — `QWEATHER_KEY='USE_BFF'`，前端不再持有Key
+1. **Vercel CLI 部署** — 执行 `npx vercel --prod` 让 `vercel.json` 修复和 JWT 签名代码真正上线
+2. **密钥轮换** — 和风控制台作废旧Key、确认线上网页版不再依赖后删除（人工操作，30分钟）
+3. **补全后端** — `api/` 骨架已存在；建议 Supabase：用户数据+收藏地点+帖子三张表起步
+4. **实现用户系统** — 邮箱/手机号+验证码登录页（复用 `api/auth/`）
+5. **收藏地点管理** — 增删改查，AsyncStorage快照+Supabase同步
+6. **前端全量切BFF** — `QWEATHER_KEY='USE_BFF'`，前端不再持有Key
 
 ### 🟡 优先级中等
 
-6. **社区功能** — 帖子列表/发帖/评论/点赞（建议放到S2末，先有用户量再开社区）
-7. **小时级预报** — 缓存已预留hourly TTL，成本最低用户感知最强，可提前
-8. **极光真实数据** — 接入NOAA Kp指数API（配置已就绪）
-9. **推送通知** — Firebase Cloud Messaging / APNs
+7. **社区功能** — 帖子列表/发帖/评论/点赞（建议放到S2末，先有用户量再开社区）
+8. **小时级预报** — 缓存已预留hourly TTL，成本最低用户感知最强，可提前
+9. **极光真实数据** — 接入NOAA Kp指数API（配置已就绪）
+10. **推送通知** — Firebase Cloud Messaging / APNs
 
 ### 🟢 优先级低
 
-10. **应用截图** — 各尺寸商店截图（欧美市场需英文素材）
-11. **EAS构建配置** — iOS/Android生产构建
-12. **多语言** — 英文支持（目标欧美，优先级实际应提前到S2）
+11. **应用截图** — 各尺寸商店截图（欧美市场需英文素材）
+12. **EAS构建配置** — iOS/Android生产构建
+13. **多语言** — 英文支持（目标欧美，优先级实际应提前到S2）
 
 ---
 

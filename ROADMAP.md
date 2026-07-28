@@ -28,7 +28,7 @@
 | 0.2 | `.env.example` 脱敏 | Kimi Work | ✅ 2026-07-27 完成 |
 | 0.3 | 修订 `HANDOVER.md` + 补 `ROADMAP.md` + 建 `WORKLOG.md` | Kimi Work | ✅ 2026-07-27 完成 |
 | 0.4 | **和风控制台作废旧Key、生成新Key（开发/线上两套）** | 老朱（人工） | ✅ 2026-07-27 已完成（新凭据 prod-bff + dev-local 已创建） |
-| 0.5 | 更新本地 `config/apiKeys.js` 与 Vercel 环境变量 | 老朱/Kimi Work | ⏳ `api/weather.js` JWT 逻辑已落地，待 Vercel 配环境变量后线上验证 |
+| 0.5 | 更新本地 `config/apiKeys.js` 与 Vercel 环境变量 | 老朱/Kimi Work | ⏳ 环境变量已配、`vercel.json` 已修，待 `vercel --prod` CLI 部署后线上验证 |
 | 0.6 | 收敛重复组件 `WeatherCard.jsx`（两处并存） | Kimi Work | ✅ 2026-07-28 完成（确认两处均为死代码，已删除） |
 | 0.7 | 注册 Apple Developer（$99/年）+ Google Play（$25）账号 | 老朱（人工） | ⬜ Google Play 新号有封闭测试门槛，越早越好 |
 | 0.8 | 决定主体形态（个人/个体户/公司），影响欧盟DSA公示信息与收款 | 老朱 | ⬜ |

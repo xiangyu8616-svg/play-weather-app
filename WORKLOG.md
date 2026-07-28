@@ -125,3 +125,30 @@ S0 仍 6/8（0.5 待 Vercel 配置），S1.1 已就绪。明日优先：
 2. ⬜ 老朱注册 Apple Developer + Google Play 开发者账号（0.7）
 3. ⬜ 老朱创建 Supabase 项目并执行 migration（按 README 步骤）
 4. ⬜ 安装 `@supabase/supabase-js` 到项目依赖
+
+---
+
+## 2026-07-28 晚间续记（21:30，Vercel 配置与部署）
+
+**【起点】**
+承接 20:00 补记终点：S0 仍 6/8（0.5 待 Vercel 配置），S1.1 已就绪。
+
+**【完成工作】**
+1. 通过 WebBridge 在老朱 Chrome 上操作 Vercel Dashboard，为项目 `play-weather-app` 配置三个环境变量：`QWEATHER_ED25519_PRIVATE_KEY`、`QWEATHER_KID`、`QWEATHER_PROJECT_ID`，均设为 `Production` 环境并触发 Redeploy
+2. 线上验证发现 `/api/weather` 返回 HTML（SPA rewrite 覆盖 API 路由），修复 `vercel.json` 的 rewrite 规则：排除 `api/` 路径，仅重写非 `_expo/`、`assets/`、`api/` 的请求
+3. 修复后发现项目未连接 Git 仓库，Redeploy 不会自动拉取最新代码；当前线上仍为旧版，需通过 `vercel --prod` CLI 或连接 Git 后 push 才能让修复真正上线
+
+**【文件调整】**
+- 修改 `vercel.json`：rewrite 正则增加 `api/` 负向前瞻，防止 SPA fallback 覆盖 `/api/weather` 等后端路由
+
+**【研究与决策】**
+- Vercel 项目当前未绑定 Git（`Import Git Repository` 按钮可见），Redeploy 只是重新打包已有代码，不会同步本地最新提交；建议后续绑定 Git 实现自动部署
+- 下次线上验证需先执行 CLI 部署：`npx vercel --prod`（需老朱登录或有 Vercel Token）
+
+**【终点与明日起点】**
+S0 仍 6/8（0.5 环境变量已配、vercel.json 已修，待 CLI 部署后真正线上验证）。今日已无剩余可推进项，阻塞项：
+1. ⏳ `vercel --prod` CLI 部署（或连接 Git 后 push）
+2. ⬜ 老朱注册 Apple Developer + Google Play 开发者账号（0.7）
+3. ⬜ 老朱创建 Supabase 项目并执行 migration（按 README 步骤）
+4. ⬜ 安装 `@supabase/supabase-js` 到项目依赖
+

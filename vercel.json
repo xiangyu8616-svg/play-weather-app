@@ -2,6 +2,6 @@
   "version": 2,
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/((?!_expo/|assets/|api/).*)", "destination": "/index.html" }{ "source": "/((?!_expo/|assets/).*)", "destination": "/index.html" }
+    { "source": "/((?!_expo/|assets/|api/).*)", "destination": "/index.html" }
   ]
 }
