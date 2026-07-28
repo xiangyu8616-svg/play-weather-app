@@ -37,7 +37,7 @@
 
 | # | 任务 | 说明 |
 |---|------|------|
-| 1.1 | 后端选型落地：Supabase | Postgres + Auth(OTP) + Realtime，与 Vercel serverless 共存 |
+| 1.1 | 后端选型落地：Supabase | ⏳ Schema + 客户端 + 接入指南已就绪（`supabase/migrations/`、`lib/supabase.js`），待创建项目并执行 migration |
 | 1.2 | 前端全量切 BFF | `QWEATHER_KEY='USE_BFF'`，前端不再持有 Key |
 | 1.3 | 登录系统 | 邮箱/手机号+验证码，复用 `api/auth/`，加 Zustand `userStore` |
 | 1.4 | 收藏地点 | AsyncStorage 快照（离线可用）+ Supabase 同步，替换 `profile.jsx` 假数据 |
