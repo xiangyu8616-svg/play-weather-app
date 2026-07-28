@@ -56,3 +56,36 @@ S0 完成 4/8 项。明日优先：
 2. Vercel 环境变量配置（可用 WebBridge 操作老朱 Chrome 上的 Vercel 后台）
 3. 线上验证通过后，删除 3 个旧凭据（不可逆，需老朱确认；提前删会断线上网页版）
 4. 收敛重复组件 WeatherCard.jsx（S0.6）
+
+---
+
+## 2026-07-28（周二）· S0 继续推进
+
+**【起点】**
+承接昨日补记的明日起点：JWT 私钥已就绪（`secrets/ed25519-private.pem`），`api/weather.js` 仍用 API KEY 明文传参，需改为 Ed25519 JWT 签名；WeatherCard 两处重复待收敛；老朱的 Apple/Google 开发者账号注册仍阻塞。
+
+**【完成工作】**
+1. 重写 `api/weather.js`：从 `jsonwebtoken` 切到 `jose`（`jose` 支持 Ed25519），实现 Ed25519 JWT 签名（kid=K6B8EKE6JU，sub=4N2B2VEN82），保留 API KEY 回退；JWT 缓存 55 分钟避免重复签名
+2. 编写 `scripts/verify-jwt.py` 独立验证脚本：用 Python `cryptography` 库复现签名逻辑，确认 JWT 结构正确（alg=EdDSA，签名 64 字节）
+3. S0.6 收敛重复组件：grep 全项目确认两个 `WeatherCard.jsx` 均无任何引用，判定为死代码；删除 `components/WeatherCard.jsx`（根目录版，218行）和 `components/weather/WeatherCard.jsx`（子目录版，123行）
+4. 更新 `.env.example`：新增 `QWEATHER_ED25519_PRIVATE_KEY`/`QWEATHER_KID`/`QWEATHER_PROJECT_ID` 说明，保留 `QWEATHER_API_KEY` 作为回退
+5. 同步文档：`HANDOVER.md` Bug #9 标记已解决；`ROADMAP.md` S0.4 标记完成、S0.5 更新为待 Vercel 配置、S0.6 标记完成
+
+**【文件调整】**
+- 修改 `api/weather.js`：Ed25519 JWT 签名 + API KEY 回退双模式；JWT 缓存；缓存 key 按 auth 模式隔离
+- 修改 `api/package.json`：依赖从 `jsonwebtoken` 换为 `jose@^5.2.0`
+- 修改 `.env.example`：新增 JWT 相关三个环境变量，保留 API KEY 回退
+- 新增 `scripts/verify-jwt.py`：Python 验证脚本，用于独立校验签名逻辑
+- 删除 `components/WeatherCard.jsx` + `components/weather/WeatherCard.jsx`：死代码，首页已全部内联
+
+**【研究与决策】**
+- `jsonwebtoken` 库不支持 Ed25519（仅 HSA/RSA/ECDSA），必须换 `jose`；Vercel serverless 会自动安装 `api/package.json` 依赖
+- 私钥通过环境变量传入（PEM 多行转 `\n` 分隔），Vercel 环境变量支持多行值，代码中自动还原换行符
+- JWT 缓存策略：55 分钟有效期（和风 JWT 有效期 1h），避免每次请求都重新签名
+
+**【终点与明日起点】**
+S0 完成 6/8 项（0.1–0.4、0.6 完成，0.5 代码就绪待 Vercel 配置）。明日优先：
+1. ⏳ 通过 WebBridge 操作老朱 Chrome 上的 Vercel Dashboard，配置 `QWEATHER_ED25519_PRIVATE_KEY`/`QWEATHER_KID`/`QWEATHER_PROJECT_ID`
+2. ⏳ 线上验证 JWT 签名后，提醒老朱删除 3 个旧凭据（不可逆，确认线上网页版不再依赖）
+3. ⬜ 老朱注册 Apple Developer + Google Play 开发者账号（0.7）
+4. 可并行启动：Supabase 项目创建 +  schema 设计（S1.1）
