@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "buildCommand": "node scripts/ensure-apiKeys.js && npx expo export --platform web",
+  "installCommand": "npm install --legacy-peer-deps",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/((?!_expo/|assets/|api/).*)", "destination": "/index.html" }
