@@ -203,7 +203,7 @@ play-weather-app/
 - ✅ **Ed25519 JWT 签名已落地**：`api/weather.js` 支持 JWT（kid=K6B8EKE6JU）和 API KEY 双模式回退；Python 脚本验证签名结构通过（64字节 Ed25519）
 - ✅ **Vercel 环境变量已配置**：`QWEATHER_ED25519_PRIVATE_KEY`、`QWEATHER_KID`（K6B8EKE6JU）、`QWEATHER_PROJECT_ID`（4N2B2VEN82）已在 Vercel Dashboard 设为 Production 环境
 - ⚠️ **仍未完成**：历史提交中包含两个明文Key（一个开发Key、一个企业版Key）
-- ⏳ **待 CLI 部署上线**：Vercel 项目当前未连接 Git，Redeploy 不会自动拉取最新代码；需执行 `npx vercel --prod`（或绑定 Git 后 push）才能让 `vercel.json` 修复和最新代码真正上线
+- ✅ **已上线（2026-07-29）**：Vercel 项目已连接 GitHub 仓库（`xiangyu8616-svg/play-weather-app`），push 到 `main` 自动构建部署；`vercel.json` 修复已生效，`/api/weather` 线上验证返回真实和风数据（Ed25519 JWT 模式）
 - ❗ **待人工确认**：旧凭据（玩天气/天气应用/天气2）是否还在使用线上网页版，确认后可删除
 
 **密钥的正确使用方式**（轮换后）：
@@ -237,9 +237,11 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 
 ### 6.3 Vercel 部署注意事项
 
-- **项目未连接 Git**：当前 Vercel 项目 `play-weather-app` 未绑定 Git 仓库，`Redeploy` 只会重新打包已有代码，不会自动同步本地最新提交。
-- **正确上线方式**：执行 `npx vercel --prod`（需老朱登录 Vercel CLI）或在 Dashboard 中 `Import Git Repository` 绑定本仓库后 push 自动部署。
-- **vercel.json 已修复**：rewrite 规则排除 `api/` 路径，防止 SPA fallback 覆盖 `/api/weather` 等后端路由。
+- ✅ **已连接 Git（2026-07-29）**：项目 `play-weather-app` 已绑定 GitHub 仓库 `xiangyu8616-svg/play-weather-app`，push 到 `main` 分支即自动触发生产部署。
+- **构建链路**：`vercel.json` 定义 `buildCommand`（`node scripts/ensure-apiKeys.js && npx expo export --platform web`）+ `installCommand`（`npm install --legacy-peer-deps`）+ `outputDirectory: dist`。`scripts/ensure-apiKeys.js` 在 CI 缺文件时生成 BFF 版 `config/apiKeys.js`，本地开发不受影响。
+- **`.vercelignore` 已重写**：旧版是"只上传 dist"的 CLI 模式（`*` 全排除），会导致 Git 构建缺源码失败，2026-07-29 已改为只排除 node_modules/密钥/日志等。
+- **vercel.json 已修复**：rewrite 规则排除 `api/` 路径，防止 SPA fallback 覆盖 `/api/weather` 等后端路由（线上已验证生效）。
+- **Vercel CLI 注意**：本机 CLI token 已过期，如需 CLI 操作需重新 `vercel login`；日常部署走 Git push 即可，不依赖 CLI。
 
 ### 6.4 Expo配置
 
