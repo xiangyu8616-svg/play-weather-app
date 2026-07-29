@@ -1,5 +1,17 @@
-*
-!.vercelignore
-!dist
-!dist/**
-!vercel.json
+# Vercel Git 构建：只排除无关产物，源码必须完整上传
+node_modules
+dist
+web-build
+.expo
+.vercel
+
+# 本地密钥与证书（绝不进构建）
+secrets
+*.pem
+.env*.local
+config/apiKeys.js
+
+# 日志与缓存
+*.log
+__pycache__
+coverage
