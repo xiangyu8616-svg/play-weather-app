@@ -6,6 +6,8 @@
 > **项目路径**: `C:\Users\xiangyu\.easyclaw\workspace\play-weather-app`
 >
 > **修订记录**:
+> - v6（2026-07-30，Kimi Work）：S1.1 Supabase 项目落地 + S1.3 OTP 登录上线；更新目录结构（补 `stores/`、`components/auth/`、删 `api/auth/`）；用户系统状态更新为已上线。
+> - v5（2026-07-29，Kimi Work）：更新第八章第1条为 Git 自动部署已上线；补充 `scripts/ensure-apiKeys.js` 到目录结构。
 > - v5（2026-07-29，Kimi Work）：更新第八章第1条为 Git 自动部署已上线；补充 `scripts/ensure-apiKeys.js` 到目录结构。
 > - v4（2026-07-28 晚间，Kimi Work）：补充 Vercel 环境变量配置进展（已配但项目未连 Git，待 CLI 部署），
 > - v4（2026-07-28 晚间，Kimi Work）：补充 Vercel 环境变量配置进展（已配但项目未连 Git，待 CLI 部署），
@@ -63,14 +65,15 @@ play-weather-app/
 │       └── profile.jsx           # 个人页（设置+硬编码数据，13KB）
 │
 ├── api/                          # ⭐ 后端 BFF（Vercel Serverless，骨架已存在）
-│   ├── _middleware.js            # 中间件
 │   ├── weather.js                # 和风天气代理（内存缓存+限流，生产应换Redis）
-│   ├── auth/
-│   │   ├── send-code.js          # 发送验证码
-│   │   └── verify-code.js        # 校验验证码
 │   └── package.json
 │
+├── stores/
+│   └── userStore.js              # ⭐ Zustand 用户状态（会话恢复/OTP/资料/收藏数）
+│
 ├── components/
+│   ├── auth/
+│   │   └── EmailLoginCard.jsx    # ⭐ 邮箱 OTP 登录卡片
 │   ├── splash/AuroraSplash.jsx   # 极光粒子启动屏动画
 │   ├── globe/                    # 3D地球仪（主组件+native/web/optimized多版本+控制+台风路径）
 │   ├── weather/                  # 天气横幅/每日预报卡片/详情卡片/现象筛选器
@@ -117,9 +120,8 @@ play-weather-app/
 ├── scripts/                      # 工具脚本
 │   ├── verify-jwt.py             # JWT 签名结构验证（Python）
 │   ├── prepare-vercel-env.py     # Vercel 环境变量配置辅助（PEM 单行化）
-│   └── ensure-apiKeys.js         # CI 构建时自动生成 BFF 版 config/apiKeys.js
-│   ├── verify-jwt.py             # JWT 签名结构验证（Python）
-│   └── prepare-vercel-env.py     # Vercel 环境变量配置辅助（PEM 单行化）
+│   ├── ensure-apiKeys.js         # CI 构建时自动生成 BFF 版 config/apiKeys.js
+│   └── run-supabase-migration.js # Supabase 迁移执行辅助脚本
 │
 ├── assets/                       # 图标/启动屏/favicon
 ├── app.json                      # Expo配置（已移除newArchEnabled/splash）
@@ -151,15 +153,15 @@ play-weather-app/
 | 极光算法 | `services/auroraService.ts` | 70% | 本地算法+模拟数据 |
 | 缓存系统 | `services/cache.ts` | 100% | 内存+AsyncStorage双层缓存 |
 | 设置持久化 | `services/settingsService.js` | 100% | AsyncStorage存储 |
+| 用户系统 | `stores/userStore.js` + `components/auth/EmailLoginCard.jsx` | 90% | Supabase OTP 登录已上线，待实测收邮件 |
 
 ### ❌ 未完成
 
 | 模块 | 文件 | 差距 | 优先级 |
 |------|------|------|--------|
 | 社区功能 | `app/(tabs)/community.jsx` | 100%缺失 | 🔴 P0 |
-| 用户系统 | `api/auth/`有骨架，无前端UI | 缺注册/登录页面 | 🔴 P0 |
-| 后端服务 | `api/`（BFF骨架）+ `supabase/`（schema已就绪） | 天气代理+验证码已有；数据库schema就绪（profiles/saved_locations/posts+RLS），待创建Supabase项目并执行migration | 🔴 P0 |
 | 收藏地点 | `profile.jsx`硬编码 | 无真实数据 | 🔴 P0 |
+| 后端服务 | `api/`（BFF骨架）+ `supabase/`（migration 已执行） | 天气代理已有；数据库项目已创建，三表+RLS+trigger 已验证 | 🟡 P1 |
 | 推送通知 | 有开关无服务 | 需FCM/APNs | 🟡 P1 |
 | 小时级预报 | 缓存层已预留`hourly`TTL | 缺服务调用+UI组件 | 🟡 P1 |
 | 真实极光数据 | 本地模拟 | 需NOAA Kp指数（`NOAA_CONFIG`已配好） | 🟡 P1 |
@@ -288,7 +290,7 @@ npm install --legacy-peer-deps
 1. **Git 自动部署已上线** — 项目已绑定 GitHub 仓库，push 到 `main` 即自动构建部署；`/api/weather` 线上验证通过（Ed25519 JWT 模式）
 2. **密钥轮换** — 和风控制台作废旧Key、确认线上网页版不再依赖后删除（人工操作，30分钟）
 3. ~~**补全后端**~~ ✅ Supabase 项目已建好（2026-07-30）：`play-weather`（us-east-1），三张表 + RLS 已迁移并验证，密钥已配 `.env.local` 和 Vercel 环境变量（DB 密码存 `secrets/supabase-db-password.txt`）
-4. **实现用户系统** — 邮箱/手机号+验证码登录页（复用 `api/auth/`）
+4. ~~**实现用户系统**~~ ✅ Supabase OTP 邮箱登录已上线（2026-07-30）：`stores/userStore.js` + `EmailLoginCard.jsx`，待实测收邮件
 5. **收藏地点管理** — 增删改查，AsyncStorage快照+Supabase同步
 6. **前端全量切BFF** — `QWEATHER_KEY='USE_BFF'`，前端不再持有Key
 
@@ -321,6 +323,8 @@ npm install --legacy-peer-deps
 | 改预报页 | `app/(tabs)/forecast.jsx` |
 | 改个人页 | `app/(tabs)/profile.jsx` |
 | 改社区页 | `app/(tabs)/community.jsx` |
+| 改登录卡片 | `components/auth/EmailLoginCard.jsx` |
+| 改用户状态 | `stores/userStore.js` |
 | 改API Key | `config/apiKeys.js`（本地，不进git） |
 | 看上线差距与计划 | `ROADMAP.md` |
 | 看每日进展 | `WORKLOG.md` |

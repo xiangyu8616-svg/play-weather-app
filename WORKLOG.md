@@ -186,3 +186,39 @@ S0 完成 7/8（0.1–0.6、0.5 完成，仅剩 0.7/0.8 待老朱人工）。明
 3. ⬜ 提醒老朱确认旧凭据是否还在使用，确认后删除
 4. 可并行：S1.2 前端全量切 BFF（`QWEATHER_KEY='USE_BFF'`）
 
+---
+
+## 2026-07-30（周四）· S1.1 落地 + S1.3 登录上线
+
+**【起点】**
+承接昨日终点：S0 完成 7/8，S1.1 待老朱创建 Supabase 项目，S1.3 登录系统待实现。
+
+**【完成工作】**
+1. S1.1 Supabase 落地：创建项目 `play-weather`（us-east-1），编写 `scripts/run-supabase-migration.js` 辅助执行 001+002 迁移，三表 + RLS + 新用户自动建 profile trigger 已验证
+2. S1.3 邮箱 OTP 登录上线：新增 `stores/userStore.js`（Zustand 会话恢复/OTP/资料）+ `components/auth/EmailLoginCard.jsx`，`profile.jsx` 接入真实登录态
+3. `services/authService.js` 重写为 Supabase 适配器，保留 getToken 等旧接口向后兼容
+4. `lib/supabase.js` 增加原生端 AsyncStorage 会话持久化
+5. 清理死代码：删除自建内存验证码 `api/auth/send-code.js`、`verify-code.js`、`_middleware.js`
+
+**【文件调整】**
+- 新增 `scripts/run-supabase-migration.js`：Supabase 迁移执行脚本
+- 新增 `stores/userStore.js`：Zustand 用户状态（会话/OTP/资料/收藏数）
+- 新增 `components/auth/EmailLoginCard.jsx`：邮箱 OTP 登录卡片
+- 新增 `supabase/migrations/002_profile_trigger.sql`：新用户自动建 profile
+- 修改 `lib/supabase.js`：增加 AsyncStorage 会话持久化
+- 修改 `services/authService.js`：Supabase 适配器，向后兼容
+- 修改 `app/(tabs)/profile.jsx`：接入真实登录态
+- 删除 `api/auth/*`、`api/_middleware.js`：内存验证码系统退役
+
+**【研究与决策】**
+- Supabase Auth OTP 替代自建验证码，解决 Vercel serverless 内存 Map 不可靠问题
+- 002 trigger 解决注册后 profiles 表无记录问题
+- authService 保留旧接口签名，向后兼容避免全量重构
+
+**【终点与明日起点】**
+S0 7/8，S1.1 完成，S1.3 已上线。明日优先：
+1. 实测邮箱 OTP 收邮件流程（老朱用自己的邮箱测试）
+2. S1.2 前端全量切 BFF（`QWEATHER_KEY='USE_BFF'`）
+3. S1.4 收藏地点（AsyncStorage 快照 + Supabase 同步）
+4. 老朱注册 Apple Developer + Google Play（0.7）
+
