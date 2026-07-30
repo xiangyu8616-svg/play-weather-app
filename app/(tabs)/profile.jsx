@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Accent, Bg, TextColor, Spacing, Radius, FontSize, FontWeight, Surface, Brand, goldAlpha, auroraAlpha, whiteAlpha } from '../../styles/designTokens';
 import { loadSettings, saveSettings } from '../../services/settingsService';
+import { useUserStore } from '../../stores/userStore';
+import EmailLoginCard from '../../components/auth/EmailLoginCard';
 
 export default function ProfileScreen() {
   const [tempUnit, setTempUnit] = useState('°C');
@@ -11,6 +13,13 @@ export default function ProfileScreen() {
   const [probabilityAlert, setProbabilityAlert] = useState(true);
   const [dailyForecast, setDailyForecast] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  // 用户登录态（Supabase Auth）
+  const { user, profile, savedLocationCount, init, signOut } = useUserStore();
+
+  useEffect(() => {
+    init();
+  }, []);
 
   // 启动时加载设置
   useEffect(() => {
@@ -84,24 +93,31 @@ export default function ProfileScreen() {
         {/* 1. App 信息头部（设计稿 6.4.1） */}
         <View style={styles.appHeader}>
           <View style={styles.avatarCircle}>
-            <Text style={styles.appIcon}>🌤️</Text>
+            <Text style={styles.appIcon}>{user ? '👤' : '🌤️'}</Text>
           </View>
-          <Text style={styles.appName}>摄影爱好者</Text>
-          <Text style={styles.appTagline}>预见金山，不负此行</Text>
+          <Text style={styles.appName}>
+            {user ? (profile?.nickname || user.email?.split('@')[0] || '摄影爱好者') : '摄影爱好者'}
+          </Text>
+          <Text style={styles.appTagline}>
+            {user ? user.email : '预见金山，不负此行'}
+          </Text>
         </View>
+
+        {/* 1.2 未登录时显示邮箱登录卡片 */}
+        {!user && <EmailLoginCard />}
 
         {/* 1.5 统计数据胶囊（设计稿 6.4.2） */}
         <View style={styles.statsRow}>
           <View style={styles.statsCapsule}>
-            <Text style={styles.statsNumber}>12</Text>
+            <Text style={styles.statsNumber}>—</Text>
             <Text style={styles.statsLabel}>发帖数</Text>
           </View>
           <View style={styles.statsCapsule}>
-            <Text style={styles.statsNumber}>348</Text>
+            <Text style={styles.statsNumber}>—</Text>
             <Text style={styles.statsLabel}>获赞数</Text>
           </View>
           <View style={styles.statsCapsule}>
-            <Text style={styles.statsNumber}>5</Text>
+            <Text style={styles.statsNumber}>{user ? savedLocationCount : '—'}</Text>
             <Text style={styles.statsLabel}>关注城市</Text>
           </View>
         </View>
@@ -196,11 +212,13 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        {/* 7. 退出登录 */}
-        <TouchableOpacity style={styles.logoutBtn} activeOpacity={0.7}>
-          <Ionicons name="log-out-outline" size={18} color="#FF375F" />
-          <Text style={styles.logoutText}>退出登录</Text>
-        </TouchableOpacity>
+        {/* 7. 退出登录（仅登录后显示） */}
+        {user && (
+          <TouchableOpacity style={styles.logoutBtn} activeOpacity={0.7} onPress={signOut}>
+            <Ionicons name="log-out-outline" size={18} color="#FF375F" />
+            <Text style={styles.logoutText}>退出登录</Text>
+          </TouchableOpacity>
+        )}
 
         {/* 8. 底部 */}
         <View style={styles.footer}>

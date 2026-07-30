@@ -152,3 +152,37 @@ S0 仍 6/8（0.5 环境变量已配、vercel.json 已修，待 CLI 部署后真�
 3. ⬜ 老朱创建 Supabase 项目并执行 migration（按 README 步骤）
 4. ⬜ 安装 `@supabase/supabase-js` 到项目依赖
 
+---
+
+## 2026-07-29（周三）· S0.5 落地 + S1.1 就绪
+
+**【起点】**
+承接昨日终点：S0 6/8（0.5 待部署验证），S1.1 客户端库未安装。
+
+**【完成工作】**
+1. 安装 `@supabase/supabase-js` 依赖（S1.1 最后准备完成）
+2. WebBridge 操作老朱 Vercel Dashboard，连接 GitHub 仓库实现 push 自动部署
+3. 重写 `.vercelignore`：旧规则 `*` 排除全部源码导致 Git 构建失败，改为只排除敏感/构建产物
+4. 编写 `scripts/ensure-apiKeys.js`：CI 构建时自动生成 BFF 版 `config/apiKeys.js`
+5. 配置 `vercel.json`：补 `buildCommand` + `installCommand`（`--legacy-peer-deps`）
+6. push 到 `main` 后自动部署成功，线上验证 `/api/weather` 返回真实和风数据（Ed25519 JWT）
+
+**【文件调整】**
+- `package.json` / `package-lock.json`：新增 `@supabase/supabase-js`
+- `.vercelignore`：改为 Git 构建模式
+- `vercel.json`：补 buildCommand / installCommand
+- `scripts/ensure-apiKeys.js`：CI 自动生成 `USE_BFF` 代理版本
+- `HANDOVER.md`：6.1/6.3 更新为 Git 自动部署已上线
+
+**【研究与决策】**
+- 放弃 CLI 部署（token 过期），改用 Git 连接自动部署
+- `.vercelignore` 双模式：CLI 用"只上传 dist"，Git 用"排除敏感文件"
+- `ensure-apiKeys.js`：CI 缺 `apiKeys.js` 时自动生成代理版本，避免 expo export 报错
+
+**【终点与明日起点】**
+S0 完成 7/8（0.1–0.6、0.5 完成，仅剩 0.7/0.8 待老朱人工）。明日优先：
+1. ⬜ 老朱注册 Apple Developer + Google Play（0.7）
+2. ⬜ 老朱创建 Supabase 项目并执行 migration（S1.1 最后一步）
+3. ⬜ 提醒老朱确认旧凭据是否还在使用，确认后删除
+4. 可并行：S1.2 前端全量切 BFF（`QWEATHER_KEY='USE_BFF'`）
+

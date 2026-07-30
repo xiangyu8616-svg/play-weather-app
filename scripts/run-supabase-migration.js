@@ -11,10 +11,9 @@ const PROJECT_REF = 'rcrbqeebrffqifaofuou';
 const password = fs
   .readFileSync(path.join(__dirname, '..', 'secrets', 'supabase-db-password.txt'), 'utf8')
   .trim();
-const sql = fs.readFileSync(
-  path.join(__dirname, '..', 'supabase', 'migrations', '001_initial_schema.sql'),
-  'utf8'
-);
+// 可通过命令行参数指定迁移文件，默认 001
+const sqlFile = process.argv[2] || path.join('supabase', 'migrations', '001_initial_schema.sql');
+const sql = fs.readFileSync(path.join(__dirname, '..', sqlFile), 'utf8');
 
 (async () => {
   const client = new Client({
