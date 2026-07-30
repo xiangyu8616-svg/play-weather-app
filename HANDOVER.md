@@ -6,6 +6,8 @@
 > **项目路径**: `C:\Users\xiangyu\.easyclaw\workspace\play-weather-app`
 >
 > **修订记录**:
+> - v5（2026-07-29，Kimi Work）：更新第八章第1条为 Git 自动部署已上线；补充 `scripts/ensure-apiKeys.js` 到目录结构。
+> - v4（2026-07-28 晚间，Kimi Work）：补充 Vercel 环境变量配置进展（已配但项目未连 Git，待 CLI 部署），
 > - v4（2026-07-28 晚间，Kimi Work）：补充 Vercel 环境变量配置进展（已配但项目未连 Git，待 CLI 部署），
 >   `vercel.json` 修复排除 `api/` 路径；6.1/6.2 安全事项更新。
 > - v3（2026-07-28，Kimi Work）：补充 `lib/`、`supabase/`、`scripts/` 目录，删除已收敛的 WeatherCard 重复项，
@@ -113,6 +115,9 @@ play-weather-app/
 │   └── README.md                 # 项目创建/配置/迁移指南
 │
 ├── scripts/                      # 工具脚本
+│   ├── verify-jwt.py             # JWT 签名结构验证（Python）
+│   ├── prepare-vercel-env.py     # Vercel 环境变量配置辅助（PEM 单行化）
+│   └── ensure-apiKeys.js         # CI 构建时自动生成 BFF 版 config/apiKeys.js
 │   ├── verify-jwt.py             # JWT 签名结构验证（Python）
 │   └── prepare-vercel-env.py     # Vercel 环境变量配置辅助（PEM 单行化）
 │
@@ -280,9 +285,9 @@ npm install --legacy-peer-deps
 
 ### 🔴 优先级最高（阻塞上线）
 
-1. **Vercel CLI 部署** — 执行 `npx vercel --prod` 让 `vercel.json` 修复和 JWT 签名代码真正上线
+1. **Git 自动部署已上线** — 项目已绑定 GitHub 仓库，push 到 `main` 即自动构建部署；`/api/weather` 线上验证通过（Ed25519 JWT 模式）
 2. **密钥轮换** — 和风控制台作废旧Key、确认线上网页版不再依赖后删除（人工操作，30分钟）
-3. **补全后端** — `api/` 骨架已存在；建议 Supabase：用户数据+收藏地点+帖子三张表起步
+3. ~~**补全后端**~~ ✅ Supabase 项目已建好（2026-07-30）：`play-weather`（us-east-1），三张表 + RLS 已迁移并验证，密钥已配 `.env.local` 和 Vercel 环境变量（DB 密码存 `secrets/supabase-db-password.txt`）
 4. **实现用户系统** — 邮箱/手机号+验证码登录页（复用 `api/auth/`）
 5. **收藏地点管理** — 增删改查，AsyncStorage快照+Supabase同步
 6. **前端全量切BFF** — `QWEATHER_KEY='USE_BFF'`，前端不再持有Key
