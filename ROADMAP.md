@@ -39,7 +39,7 @@
 |---|------|------|
 | 1.1 | 后端选型落地：Supabase | ✅ 项目已创建（`play-weather`，us-east-1，ref: rcrbqeebrffqifaofuou），migration 已执行（profiles / saved_locations / posts 三表 + RLS 已验证），URL + publishable key 已配 `.env.local` 和 Vercel 环境变量；下一步替换 `authService` 为 Supabase OTP |
 | 1.2 | 前端全量切 BFF | `QWEATHER_KEY='USE_BFF'`，前端不再持有 Key |
-| 1.3 | 登录系统 | 邮箱/手机号+验证码，复用 `api/auth/`，加 Zustand `userStore` |
+| 1.3 | 登录系统 | ✅ 邮箱 OTP 已上线（2026-07-30）：`stores/userStore.js` + `EmailLoginCard`，Supabase Auth 替代 `api/auth/`（已删）；Zustand `userStore` 含会话恢复/资料/收藏数；待实测收邮件 + 昵称编辑 |
 | 1.4 | 收藏地点 | AsyncStorage 快照（离线可用）+ Supabase 同步，替换 `profile.jsx` 假数据 |
 | 1.5 | 小时级预报 | 缓存已预留 `hourly` TTL，补服务调用+`HourlyForecastRow` 组件（提前自P1） |
 | 1.6 | 极光真实数据 | 接入 NOAA Kp 指数（`NOAA_CONFIG` 已配好） |
