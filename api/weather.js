@@ -3,15 +3,20 @@
  *
  * 职责：
  * 1. 从环境变量读取密钥，避免前端暴露
- * 2. 支持 Ed25519 JWT 签名（推荐）和 API KEY 回退
- * 3. 转发前端请求到和风天气 API
+ * 2. 支持 Ed25519 JWT 签名（推荐，Authorization: Bearer）和 API KEY 回退（query key=）
+ * 3. 按白名单转发前端请求到和风天气 API（天气类 + 城市搜索类）
  * 4. 简单缓存（内存 Map，生产环境应换 Redis）
  * 5. 请求频率限制
+ *
+ * 查询参数：
+ *   - type: 端点路径（见 ENDPOINTS 白名单），默认 weather/now
+ *   - 其余参数（location / number / lang / range 等）原样透传
  *
  * 环境变量（二选一）：
  *   - 推荐：QWEATHER_ED25519_PRIVATE_KEY + QWEATHER_KID + QWEATHER_PROJECT_ID
  *   - 回退：QWEATHER_API_KEY
  *   - QWEATHER_BASE_URL（默认 https://api.qweather.com/v7）
+ *   - QWEATHER_GEO_BASE_URL（默认 https://geoapi.qweather.com/v2）
  */
 
 import { SignJWT, importPKCS8 } from 'jose';
@@ -24,6 +29,20 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 分钟
 const rateLimit = new Map();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 分钟窗口
 const RATE_LIMIT_MAX = 60; // 每窗口最多 60 次
+
+// 允许转发的端点白名单：端点路径 → 上游 API 类型
+// weather = 天气数据 API（/v7）；geo = 城市搜索 API（/v2）
+const ENDPOINTS = {
+  'weather/now': 'weather',
+  'weather/3d': 'weather',
+  'weather/7d': 'weather',
+  'weather/24h': 'weather',
+  'weather/72h': 'weather',
+  'warnings/now': 'weather',
+  'air/now': 'weather',
+  'city/lookup': 'geo',
+  'city/top': 'geo',
+};
 
 function getClientIP(req) {
   return req.headers['x-forwarded-for']?.split(',')[0]?.trim()
@@ -93,38 +112,57 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Too Many Requests', retryAfter: 60 });
   }
 
-  const { location, type, lang } = req.query;
-  if (!location) {
-    return res.status(400).json({ error: 'Missing parameter: location' });
+  // 端点白名单校验（防止代理被用于任意路径/任意主机）
+  const type = typeof req.query.type === 'string' && req.query.type
+    ? req.query.type
+    : 'weather/now';
+  const apiKind = ENDPOINTS[type];
+  if (!apiKind) {
+    return res.status(400).json({ error: `Unsupported endpoint type: ${type}` });
   }
 
-  const baseUrl = process.env.QWEATHER_BASE_URL || 'https://api.qweather.com/v7';
+  const weatherBase = process.env.QWEATHER_BASE_URL || 'https://api.qweather.com/v7';
+  const geoBase = process.env.QWEATHER_GEO_BASE_URL || 'https://geoapi.qweather.com/v2';
+  const baseUrl = apiKind === 'geo' ? geoBase : weatherBase;
 
-  // 优先 JWT，回退 API KEY
-  let authKey = await getSignedJWT();
+  // 透传除 type 外的所有查询参数
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(req.query)) {
+    if (k === 'type' || typeof v !== 'string') continue;
+    params.set(k, v);
+  }
+  if (!params.has('location')) {
+    return res.status(400).json({ error: 'Missing parameter: location' });
+  }
+  if (!params.has('lang')) params.set('lang', 'zh');
+
+  // 优先 JWT（Authorization: Bearer），回退 API KEY（query key=）
+  const headers = {};
   let authMode = 'jwt';
-
-  if (!authKey) {
-    authKey = process.env.QWEATHER_API_KEY;
+  const jwt = await getSignedJWT();
+  if (jwt) {
+    headers.Authorization = `Bearer ${jwt}`;
+  } else {
+    const apiKey = process.env.QWEATHER_API_KEY;
     authMode = 'apikey';
-    if (!authKey) {
+    if (!apiKey) {
       console.error('No auth configured (need Ed25519 private key or API key)');
       return res.status(500).json({ error: 'Server configuration error' });
     }
+    params.set('key', apiKey);
   }
 
+  const upstreamPath = `${baseUrl}/${type}?${params.toString()}`;
+
   // 构建缓存 key（按 auth 模式隔离，避免 JWT/APIKEY 混用缓存）
-  const cacheKey = `${authMode}:${type || 'now'}:${location}:${lang || 'zh'}`;
+  const cacheKey = `${authMode}:${upstreamPath}`;
   const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return res.status(200).json(cached.data);
   }
 
   try {
-    const weatherType = type || 'weather/now';
-    const url = `${baseUrl}/${weatherType}?location=${encodeURIComponent(location)}&key=${authKey}&lang=${lang || 'zh'}`;
-
-    const response = await fetch(url);
+    const response = await fetch(upstreamPath, { headers });
     const data = await response.json();
 
     // 缓存成功响应

@@ -38,10 +38,10 @@
 | # | 任务 | 说明 |
 |---|------|------|
 | 1.1 | 后端选型落地：Supabase | ✅ 项目已创建（`play-weather`，us-east-1，ref: rcrbqeebrffqifaofuou），migration 已执行（profiles / saved_locations / posts 三表 + RLS 已验证），URL + publishable key 已配 `.env.local` 和 Vercel 环境变量；下一步替换 `authService` 为 Supabase OTP |
-| 1.2 | 前端全量切 BFF | `QWEATHER_KEY='USE_BFF'`，前端不再持有 Key |
+| 1.2 | 前端全量切 BFF | ✅ 2026-08-03 完成：线上构建由 ensure-apiKeys 生成 `QWEATHER_KEY='USE_BFF'`，前端不持有 Key；修复 BFF 代理端点丢失 bug（原实现丢弃 endpoint 导致线上搜索/逐日预报长期走 mock）——代理改为端点白名单转发（weather/* + city/lookup），JWT 改 Authorization: Bearer，前端 buildUrl 传 type |
 | 1.3 | 登录系统 | ✅ 邮箱 OTP 已上线（2026-07-30）：`stores/userStore.js` + `EmailLoginCard`，Supabase Auth 替代 `api/auth/`（已删）；Zustand `userStore` 含会话恢复/资料/收藏数；待实测收邮件 + 昵称编辑 |
-| 1.4 | 收藏地点 | AsyncStorage 快照（离线可用）+ Supabase 同步，替换 `profile.jsx` 假数据 |
-| 1.5 | 小时级预报 | 缓存已预留 `hourly` TTL，补服务调用+`HourlyForecastRow` 组件（提前自P1） |
+| 1.4 | 收藏地点 | ✅ 2026-08-03 上线：`stores/savedLocationsStore.js`（AsyncStorage 快照，离线/未登录可用）+ Supabase `saved_locations` 双向合并（乐观更新+失败回滚）；city-list 星标 toggle +「我的收藏」分组；首页默认城市接入；待实测云端同步 |
+| 1.5 | 小时级预报 | ✅ 2026-08-03 完成：`getHourlyForecast`（/weather/24h，缓存 TTL 30min）+ 首页逐小时横向滚动卡片（时刻/图标/温度/降水概率）；概览行图标按天气文本映射 |
 | 1.6 | 极光真实数据 | 接入 NOAA Kp 指数（`NOAA_CONFIG` 已配好） |
 | 1.7 | 后端加固 | 限流换 Upstash Redis、验证码防刷、JWT secret 换 64 字节随机串 |
 | 1.8 | "今日拍摄窗口"卡片 | 黄金时刻+天气条件合成一句话结论（差异化核心，见下） |

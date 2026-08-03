@@ -66,19 +66,16 @@ function getUVLevel(index) {
   return { label: '极高', color: '#BF5AF2' };
 }
 
-function generateMockHourly(nowWeather, dailyForecast) {
-  const baseTemp = parseInt(nowWeather?.temp) || 25;
-  const conditions = [nowWeather?.text || '晴'];
-  if (dailyForecast?.[0]?.textDay) conditions.push(dailyForecast[0].textDay);
-  const hourly = [];
-  const now = new Date();
-  for (let i = 0; i < 24; i++) {
-    const d = new Date(now.getTime() + i * 3600000);
-    const hour = d.getHours();
-    const offset = Math.sin(((hour - 5) / 24) * Math.PI * 2) * 4;
-    hourly.push({ hour, temp: Math.round(baseTemp + offset), text: conditions[Math.floor(Math.random() * conditions.length)] });
-  }
-  return hourly;
+// 天气文本 → Ionicons 图标名（isNight 时晴/多云用夜间图标）
+function getWeatherIconName(text, isNight = false) {
+  const t = text || '';
+  if (t.includes('雷')) return 'thunderstorm-outline';
+  if (t.includes('雪') || t.includes('冰')) return 'snow-outline';
+  if (t.includes('雨') || t.includes('滴')) return 'rainy-outline';
+  if (t.includes('雾') || t.includes('霾') || t.includes('沙')) return 'cloudy-outline';
+  if (t.includes('阴')) return 'cloudy-outline';
+  if (t.includes('云') || t.includes('多')) return isNight ? 'cloudy-outline' : 'partly-sunny-outline';
+  return isNight ? 'moon-outline' : 'sunny-outline';
 }
 
 function generateMockAqi() {
@@ -196,13 +193,14 @@ export default function HomeScreen() {
     try {
       setLoadError(false);
       setIsLoading(true);
-      const [weather, forecast] = await Promise.all([
+      const [weather, forecast, hourly] = await Promise.all([
         qweatherService.getNowWeather(locationId),
         qweatherService.getDailyForecast(locationId),
+        qweatherService.getHourlyForecast(locationId),
       ]);
       setNowWeather(weather);
       setDailyForecast(forecast);
-      setHourlyForecast(generateMockHourly(weather, forecast));
+      setHourlyForecast(hourly);
       setAqiData(generateMockAqi());
     } catch (error) {
       console.error('加载天气数据失败:', error);
@@ -211,7 +209,7 @@ export default function HomeScreen() {
       const mockForecast = qweatherService.generateMockDailyForecast();
       setNowWeather(mockWeather);
       setDailyForecast(mockForecast);
-      setHourlyForecast(generateMockHourly(mockWeather, mockForecast));
+      setHourlyForecast(qweatherService.generateMockHourlyForecast());
       setAqiData(generateMockAqi());
     } finally {
       setIsLoading(false);
@@ -406,7 +404,7 @@ export default function HomeScreen() {
             <View style={styles.weatherMain}>
               <Text style={styles.weatherTemp}>{temp}°</Text>
               <View style={styles.weatherCondition}>
-                <Ionicons name="sunny-outline" size={18} color={getWeatherIconColor(nowWeather?.text)} />
+                <Ionicons name={getWeatherIconName(nowWeather?.text)} size={18} color={getWeatherIconColor(nowWeather?.text)} />
                 <Text style={styles.weatherText}>{nowWeather?.text || '晴间多云'}</Text>
               </View>
             </View>
@@ -414,6 +412,22 @@ export default function HomeScreen() {
               <Text style={styles.weatherHiLoText}>H:{todayHigh}°  L:{todayLow}°</Text>
               <Text style={styles.weatherFeels}>体感 {Math.round(parseInt(nowWeather?.feelsLike) || temp)}°</Text>
             </View>
+          </View>
+
+          {/* ═══════════════════════════════════════════
+              3.5 逐小时预报（横向滚动）
+          ═══════════════════════════════════════════ */}
+          <View style={styles.hourlyCard}>
+            <Text style={styles.sectionTitle}>逐小时预报</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.hourlyRow}
+            >
+              {hourlyForecast.slice(0, 24).map((h, i) => (
+                <HourlyItem key={h.fxTime || i} item={h} isNow={i === 0} />
+              ))}
+            </ScrollView>
           </View>
 
           {/* ═══════════════════════════════════════════
@@ -561,6 +575,26 @@ function QuickMetric({ icon, label, value, color = TextColor.primary }) {
   );
 }
 
+function HourlyItem({ item, isNow }) {
+  const d = item.fxTime ? new Date(item.fxTime) : null;
+  const hour = d && !isNaN(d) ? d.getHours() : null;
+  const hourLabel = isNow ? '现在' : hour != null ? `${hour}时` : '--';
+  const isNight = hour != null && (hour < 6 || hour >= 19);
+  const pop = parseInt(item.pop) || 0;
+  return (
+    <View style={styles.hourlyItem}>
+      <Text style={styles.hourlyHour}>{hourLabel}</Text>
+      <Ionicons
+        name={getWeatherIconName(item.text, isNight)}
+        size={18}
+        color={getWeatherIconColor(item.text)}
+      />
+      <Text style={styles.hourlyTemp}>{Math.round(parseInt(item.temp) || 0)}°</Text>
+      <Text style={[styles.hourlyPop, { opacity: pop >= 20 ? 1 : 0 }]}>💧{pop}%</Text>
+    </View>
+  );
+}
+
 function PhenomenonRow({ icon, name, probability, meta }) {
   const good = probability >= 40;
   return (
@@ -696,6 +730,34 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     backgroundColor: 'rgba(18, 18, 26, 0.40)',
     borderRadius: Radius.lg,
+  },
+
+  // ── 逐小时预报 ──
+  hourlyCard: {
+    ...CardStyle,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  hourlyRow: {
+    gap: Spacing.md,
+    paddingRight: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  hourlyItem: {
+    alignItems: 'center', gap: 6, minWidth: 44,
+  },
+  hourlyHour: {
+    fontSize: FontSize.micro,
+    color: TextColor.muted,
+  },
+  hourlyTemp: {
+    fontSize: FontSize.body,
+    fontWeight: FontWeight.semiBold,
+    color: TextColor.primary,
+  },
+  hourlyPop: {
+    fontSize: FontSize.micro,
+    color: '#60A5FA',
   },
   weatherMain: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

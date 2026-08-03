@@ -102,9 +102,11 @@ const USE_BFF = !QWEATHER_KEY || QWEATHER_KEY === 'USE_BFF';
  */
 function buildUrl(baseUrl, endpoint, params = {}) {
   // BFF 模式下通过代理请求，不直接携带 API Key
+  // endpoint 以 type 参数传给代理，由代理按白名单转发（含城市搜索 city/lookup）
   if (USE_BFF) {
     const searchParams = new URLSearchParams({
       lang: API_CONFIG.lang || 'zh',
+      type: endpoint.replace(/^\//, ''),
       ...params,
     });
     return `${BFF_BASE}/weather?${searchParams.toString()}`;
@@ -293,8 +295,37 @@ function generateMockDailyForecast(days = 7) {
 }
 
 /**
+ * 生成 Mock 逐小时预报数据
+ *
+ * ⚠️ MOCK DATA — 等待接入真实 API
+ * 基于小时数的确定性正弦温度曲线（24 条），不含随机值
+ */
+function generateMockHourlyForecast() {
+  const textTemplates = ['晴', '晴', '多云', '多云', '阴', '晴'];
+  const hourly = [];
+  const now = new Date();
+  for (let i = 0; i < 24; i++) {
+    const d = new Date(now.getTime() + i * 3600000);
+    const hour = d.getHours();
+    // 确定性温度曲线：午后 14 点最热，凌晨 5 点最凉
+    const temp = Math.round(26 + Math.sin(((hour - 8) / 24) * Math.PI * 2) * 5);
+    hourly.push({
+      fxTime: d.toISOString(),
+      temp: String(temp),
+      icon: '100',
+      text: textTemplates[hour % textTemplates.length],
+      pop: String(hour >= 18 && hour <= 21 ? 30 : 5),
+      humidity: '65',
+      windScale: '3',
+      cloud: '50',
+    });
+  }
+  return hourly;
+}
+
+/**
  * 生成 Mock 台风列表
- * 
+ *
  * ⚠️ MOCK DATA — 等待接入真实 API
  * 固定演示数据，不含随机值
  */
@@ -418,6 +449,28 @@ function normalizeDailyForecast(apiData) {
     uvIndex: day.uvIndex || '0',
     sunrise: day.sunrise,
     sunset: day.sunset,
+  }));
+}
+
+/**
+ * 标准化逐小时预报数据
+ * @param apiData - API 返回的逐小时预报数据
+ * @returns 标准化逐小时数组
+ */
+function normalizeHourlyForecast(apiData) {
+  if (!apiData || !apiData.hourly) {
+    return generateMockHourlyForecast();
+  }
+
+  return apiData.hourly.map(h => ({
+    fxTime: h.fxTime,
+    temp: h.temp,
+    icon: h.icon,
+    text: h.text,
+    pop: h.pop || '0',
+    humidity: h.humidity,
+    windScale: h.windScale,
+    cloud: h.cloud,
   }));
 }
 
@@ -554,6 +607,35 @@ export async function getDailyForecast(locationId) {
 }
 
 /**
+ * 获取逐小时预报（24 小时）
+ * @param locationId - 城市 ID
+ * @returns 24 小时预报数组
+ */
+export async function getHourlyForecast(locationId) {
+  const cacheKey = `weather:hourly:${locationId}:24h`;
+  const cacheTTL = CACHE_TTL.hourly || 30 * 60 * 1000;
+
+  const url = buildUrl(WEATHER_API_BASE, '/weather/24h', {
+    location: locationId,
+  });
+
+  try {
+    const data = await fetchWithCache(
+      url,
+      cacheKey,
+      cacheTTL,
+      true, // 使用 Mock 回退
+      generateMockHourlyForecast
+    );
+
+    return normalizeHourlyForecast(data);
+  } catch (error) {
+    console.error('[qweather] getHourlyForecast 失败:', error);
+    return generateMockHourlyForecast();
+  }
+}
+
+/**
  * 获取活跃台风列表
  * @param basin - 海域 (默认 NP=西北太平洋)
  * @returns 台风列表
@@ -617,11 +699,13 @@ export default {
   searchCity,
   getNowWeather,
   getDailyForecast,
+  getHourlyForecast,
   getTyphoonList,
   getTyphoonTrack,
   // 导出生成器供外部使用
   generateMockNowWeather,
   generateMockDailyForecast,
+  generateMockHourlyForecast,
   generateMockTyphoonList,
   generateMockTyphoonTrack,
 };
