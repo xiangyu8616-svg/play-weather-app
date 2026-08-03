@@ -16,7 +16,17 @@ import { getToken } from '../authService';
 
 // ==================== 配置 ====================
 
-const GEO_API_BASE = 'https://geoapi.qweather.com/v2';
+const GEO_API_BASE = (() => {
+  // 新版控制台专属 API Host（*.qweatherapi.com）下 GeoAPI 走 <host>/geo/v2；
+  // 旧版公共 API 走 geoapi.qweather.com/v2
+  try {
+    const base = API_CONFIG.baseURL || '';
+    if (/(^|\.)qweatherapi\.com$/.test(new URL(base).host)) {
+      return base.replace(/\/v7\/?$/, '/geo/v2');
+    }
+  } catch { /* 非法 URL 时走公共默认 */ }
+  return 'https://geoapi.qweather.com/v2';
+})();
 const WEATHER_API_BASE = 'https://m85ctw7p24.re.qweatherapi.com/v7';
 
 // BFF 代理地址（Vercel Functions 或本地开发）

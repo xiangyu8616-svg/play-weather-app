@@ -101,6 +101,18 @@ async function getSignedJWT() {
   }
 }
 
+// GeoAPI base 推导：新版控制台专属 API Host（*.qweatherapi.com）下 GeoAPI 走 <host>/geo/v2；
+// 旧版公共 API 走 geoapi.qweather.com/v2
+function deriveGeoBase(weatherBase) {
+  try {
+    const host = new URL(weatherBase).host;
+    if (/(^|\.)qweatherapi\.com$/.test(host)) {
+      return weatherBase.replace(/\/v7\/?$/, '/geo/v2');
+    }
+  } catch { /* 非法 URL 时走公共默认 */ }
+  return 'https://geoapi.qweather.com/v2';
+}
+
 export default async function handler(req, res) {
   // 仅允许 GET
   if (req.method !== 'GET') {
@@ -122,7 +134,7 @@ export default async function handler(req, res) {
   }
 
   const weatherBase = process.env.QWEATHER_BASE_URL || 'https://api.qweather.com/v7';
-  const geoBase = process.env.QWEATHER_GEO_BASE_URL || 'https://geoapi.qweather.com/v2';
+  const geoBase = process.env.QWEATHER_GEO_BASE_URL || deriveGeoBase(weatherBase);
   const baseUrl = apiKind === 'geo' ? geoBase : weatherBase;
 
   // 透传除 type 外的所有查询参数
