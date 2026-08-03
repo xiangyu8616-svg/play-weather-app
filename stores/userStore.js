@@ -4,6 +4,7 @@
  * 职责：
  * - Supabase Auth 会话初始化与订阅
  * - 邮箱 OTP 登录（发送验证码 / 校验登录）
+ * - Apple Sign-In / Google Sign-In 一键登录
  * - 用户资料（profiles）与收藏数量（saved_locations）加载
  * - 登出
  *
@@ -14,7 +15,7 @@
  */
 
 import { create } from 'zustand';
-import { supabase, getProfile, getSavedLocations } from '../lib/supabase';
+import { supabase, getProfile, getSavedLocations, updateProfile } from '../lib/supabase';
 
 export const useUserStore = create((set, get) => ({
   // ---- 状态 ----
@@ -107,6 +108,86 @@ export const useUserStore = create((set, get) => ({
       await supabase.auth.signOut();
     } finally {
       set({ session: null, user: null, profile: null, savedLocationCount: 0 });
+    }
+  },
+
+  // ---- Apple Sign-In ----
+  // 依赖: expo-apple-authentication (iOS 14+ / macOS)
+  signInWithApple: async () => {
+    try {
+      const AppleAuthentication = require('expo-apple-authentication');
+      const { AppleAuthenticationScope } = AppleAuthentication;
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthenticationScope.FULL_NAME,
+          AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        throw new Error('Apple 登录未返回身份令牌');
+      }
+
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken,
+      });
+
+      if (error) throw error;
+
+      // 首次登录时 Apple 会返回姓名，存入 profile
+      if (credential.fullName) {
+        const names = [
+          credential.fullName.givenName,
+          credential.fullName.familyName,
+        ].filter(Boolean);
+        if (names.length > 0) {
+          await updateProfile(data.user.id, { nickname: names.join(' ') });
+        }
+      }
+
+      set({ session: data.session, user: data.user });
+      get().refreshProfile();
+      return { ok: true };
+    } catch (e) {
+      if (e.code === 'ERR_CANCELED') return { ok: false, error: null };
+      return { ok: false, error: e?.message || 'Apple 登录失败' };
+    }
+  },
+
+  // ---- Google Sign-In ----
+  // 依赖: expo-auth-session + expo-web-browser
+  signInWithGoogle: async () => {
+    try {
+      const { makeRedirectUri } = require('expo-auth-session');
+      const redirectUri = makeRedirectUri({ scheme: 'playweather' });
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUri,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) throw error;
+
+      const { WebBrowser } = require('expo-web-browser');
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+
+      if (result.type === 'success') {
+        // 浏览器成功返回后，Supabase 的 onAuthStateChange 会自动更新 session
+        return { ok: true };
+      }
+
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        return { ok: false, error: null };
+      }
+
+      throw new Error('Google 授权未成功');
+    } catch (e) {
+      return { ok: false, error: e?.message || 'Google 登录失败' };
     }
   },
 }));

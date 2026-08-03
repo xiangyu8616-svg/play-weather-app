@@ -6,6 +6,7 @@ import { Accent, Bg, TextColor, Spacing, Radius, FontSize, FontWeight, Surface, 
 import { loadSettings, saveSettings } from '../../services/settingsService';
 import { useUserStore } from '../../stores/userStore';
 import EmailLoginCard from '../../components/auth/EmailLoginCard';
+import SocialLoginButtons from '../../components/auth/SocialLoginButtons';
 
 export default function ProfileScreen() {
   const [tempUnit, setTempUnit] = useState('°C');
@@ -15,7 +16,7 @@ export default function ProfileScreen() {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // 用户登录态（Supabase Auth）
-  const { user, profile, savedLocationCount, init, signOut } = useUserStore();
+  const { user, profile, savedLocationCount, init, signOut, signInWithApple, signInWithGoogle } = useUserStore();
 
   useEffect(() => {
     init();
@@ -104,7 +105,25 @@ export default function ProfileScreen() {
         </View>
 
         {/* 1.2 未登录时显示邮箱登录卡片 */}
-        {!user && <EmailLoginCard />}
+        {!user && (
+          <>
+            <EmailLoginCard
+              footer={
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
+                    <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginHorizontal: 12 }}>或使用</Text>
+                    <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                  </View>
+                  <SocialLoginButtons
+                    onApplePress={signInWithApple}
+                    onGooglePress={signInWithGoogle}
+                  />
+                </>
+              }
+            />
+          </>
+        )}
 
         {/* 1.5 统计数据胶囊（设计稿 6.4.2） */}
         <View style={styles.statsRow}>

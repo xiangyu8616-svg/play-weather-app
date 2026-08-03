@@ -13,7 +13,7 @@ import { useUserStore } from '../../stores/userStore';
 
 const RESEND_COOLDOWN = 60; // 秒
 
-export default function EmailLoginCard() {
+export default function EmailLoginCard({ footer }) {
   const { sendEmailCode, verifyEmailCode, sending, verifying } = useUserStore();
 
   const [step, setStep] = useState('email'); // 'email' | 'code'
@@ -139,6 +139,8 @@ export default function EmailLoginCard() {
         <Ionicons name="lock-closed-outline" size={12} color={TextColor.Tertiary} />
         <Text style={styles.secureText}>登录即代表同意用户协议与隐私政策</Text>
       </View>
+
+      {footer}
     </View>
   );
 }
