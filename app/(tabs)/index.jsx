@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import GlobeView from '../../components/globe/GlobeView';
 import qweatherService from '../../services/weather/qweatherService';
+import { useSavedLocationsStore } from '../../stores/savedLocationsStore';
 import {
   getPhotographyTimes, formatTime, getMoonPhase,
   getMilkyWayVisibility, getConstellationPosition, getSunPosition,
@@ -251,7 +252,26 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, [astronomyData]);
 
-  useEffect(() => { loadWeatherData(currentCity.id); }, []);
+  // 首次加载：初始化收藏 store，有收藏时以默认收藏城市作为初始城市
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await useSavedLocationsStore.getState().init();
+      if (cancelled) return;
+      const locs = useSavedLocationsStore.getState().locations;
+      const def = locs.find((l) => l.isDefault) || locs[0];
+      if (def && def.id && def.id !== currentCity.id) {
+        setCurrentCity({ name: def.name, id: def.id });
+        if (def.lat && def.lon) {
+          cityCoords.current = { lat: parseFloat(def.lat), lng: parseFloat(def.lon) };
+        }
+        loadWeatherData(def.id);
+      } else {
+        loadWeatherData(currentCity.id);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleSearch = async (query) => {
     router.push('/city-list');

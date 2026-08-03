@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import qweatherService from '../services/weather/qweatherService';
+import { useSavedLocationsStore } from '../stores/savedLocationsStore';
 import {
   Bg, Accent, TextColor, Spacing, Radius,
   FontSize, FontWeight, auroraAlpha, whiteAlpha,
@@ -49,6 +50,12 @@ export default function CityListScreen() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const { locations: savedLocations, init: initSaved, toggle: toggleSaved } = useSavedLocationsStore();
+
+  // 初始化收藏 store（本地快照 + 登录后云端合并）
+  useEffect(() => { initSaved(); }, []);
+
+  const isSaved = (id) => savedLocations.some((l) => l.id === id);
 
   const search = useCallback(async (text) => {
     if (!text || text.trim().length < 1) {
@@ -97,11 +104,24 @@ export default function CityListScreen() {
           </Text>
         </View>
       </View>
-      {item.kp && (
-        <View style={styles.kpBadge}>
-          <Text style={styles.kpBadgeText}>KP{item.kp}</Text>
-        </View>
-      )}
+      <View style={styles.cityItemRight}>
+        {item.kp && (
+          <View style={styles.kpBadge}>
+            <Text style={styles.kpBadgeText}>KP{item.kp}</Text>
+          </View>
+        )}
+        <TouchableOpacity
+          style={styles.starBtn}
+          onPress={() => toggleSaved(item)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons
+            name={isSaved(item.id) ? 'star' : 'star-outline'}
+            size={20}
+            color={isSaved(item.id) ? Accent.star : TextColor.muted}
+          />
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   );
 
@@ -163,7 +183,11 @@ export default function CityListScreen() {
           )
         ) : (
           <FlatList
-            data={[{ title: '极光观测热门', data: AURORA_CITIES }, { title: '热门城市', data: HOT_CITIES }]}
+            data={[
+              ...(savedLocations.length > 0 ? [{ title: '我的收藏', data: savedLocations }] : []),
+              { title: '极光观测热门', data: AURORA_CITIES },
+              { title: '热门城市', data: HOT_CITIES },
+            ]}
             keyExtractor={(item) => item.title}
             renderItem={({ item }) => (
               <View style={styles.section}>
@@ -176,6 +200,17 @@ export default function CityListScreen() {
                       onPress={() => handleSelect(city)}
                       activeOpacity={0.7}
                     >
+                      <TouchableOpacity
+                        style={styles.gridStarBtn}
+                        onPress={(e) => { e?.stopPropagation?.(); toggleSaved(city); }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons
+                          name={isSaved(city.id) ? 'star' : 'star-outline'}
+                          size={12}
+                          color={isSaved(city.id) ? Accent.star : 'rgba(255,255,255,0.25)'}
+                        />
+                      </TouchableOpacity>
                       <Text style={styles.gridItemName}>{city.name}</Text>
                       {city.kp && (
                         <Text style={styles.gridItemKp}>KP{city.kp}</Text>
@@ -262,6 +297,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minWidth: 80,
   },
+  gridStarBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 20, height: 20,
+    justifyContent: 'center', alignItems: 'center',
+  },
   gridItemName: {
     fontSize: FontSize.body,
     color: TextColor.primary,
@@ -283,7 +325,14 @@ const styles = StyleSheet.create({
     borderColor: whiteAlpha(0.04),
   },
   cityItemLeft: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1,
+  },
+  cityItemRight: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
+  starBtn: {
+    width: 32, height: 32, borderRadius: Radius.full,
+    justifyContent: 'center', alignItems: 'center',
   },
   cityItemInfo: {},
   cityItemName: {
