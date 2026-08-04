@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import GlobeView from '../../components/globe/GlobeView';
 import qweatherService from '../../services/weather/qweatherService';
+import noaaService from '../../services/aurora/noaaService';
 import { useSavedLocationsStore } from '../../stores/savedLocationsStore';
 import {
   getPhotographyTimes, formatTime, getMoonPhase,
@@ -123,6 +124,7 @@ export default function HomeScreen() {
   const [aqiData, setAqiData] = useState(null);
   const [astronomyData, setAstronomyData] = useState(null);
   const [goldenCountdown, setGoldenCountdown] = useState('--');
+  const [kpData, setKpData] = useState(null);
 
   const cityCoords = useRef({ lat: 39.9042, lng: 116.4074 });
 
@@ -193,14 +195,16 @@ export default function HomeScreen() {
     try {
       setLoadError(false);
       setIsLoading(true);
-      const [weather, forecast, hourly] = await Promise.all([
+      const [weather, forecast, hourly, kp] = await Promise.all([
         qweatherService.getNowWeather(locationId),
         qweatherService.getDailyForecast(locationId),
         qweatherService.getHourlyForecast(locationId),
+        noaaService.getKpForecast(), // 失败返回 null，不影响其他数据
       ]);
       setNowWeather(weather);
       setDailyForecast(forecast);
       setHourlyForecast(hourly);
+      setKpData(kp);
       setAqiData(generateMockAqi());
     } catch (error) {
       console.error('加载天气数据失败:', error);
@@ -292,9 +296,17 @@ export default function HomeScreen() {
   const scoreLabel = getScoreLabel(score);
   const uv = getUVLevel(uvIndex);
 
-  // ── 极光可见性判断 ──
-  const auroraVisible = score >= 55 && parseInt(cloudCover) <= 60;
-  const auroraProbability = Math.min(100, Math.round(score * 0.9));
+  // ── 极光可见性判断（1.6：接入 NOAA 真实 Kp）──
+  // 纬度门槛：当前城市看到极光所需的最小 Kp
+  const requiredKp = noaaService.requiredKpForLatitude(cityCoords.current.lat);
+  const tonightKp = kpData?.tonightKpMax ?? null;
+  const auroraVisible = tonightKp != null
+    ? tonightKp >= requiredKp && parseInt(cloudCover) <= 60
+    : score >= 55 && parseInt(cloudCover) <= 60; // 无 Kp 数据时回退旧逻辑
+  // 概率合成：天气条件分占 50%，Kp 达标程度占 45%
+  const auroraProbability = tonightKp != null
+    ? Math.min(99, Math.max(1, Math.round(score * 0.5 + (tonightKp / requiredKp) * 45)))
+    : Math.min(100, Math.round(score * 0.9));
 
   return (
     <LinearGradient colors={bgColors} style={styles.container} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
@@ -363,7 +375,9 @@ export default function HomeScreen() {
               </Text>
               <View style={styles.heroSubRow}>
                 <Text style={styles.heroSubText}>
-                  KP 5 → {auroraVisible ? '可见' : '需更高指数'}
+                  {tonightKp != null
+                    ? `今晚 KP 峰值 ${tonightKp} · 本地需 KP≥${requiredKp}`
+                    : `KP ${requiredKp} → ${auroraVisible ? '可见' : '需更高指数'}`}
                 </Text>
               </View>
             </View>
