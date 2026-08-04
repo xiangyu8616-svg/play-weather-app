@@ -31,7 +31,7 @@ function getAqiColor(aqi) {
 // ═══════════════════════════════════════════
 
 export default function ForecastScreen() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [selectedDay, setSelectedDay] = useState(0);
   const [loading, setLoading] = useState(true);
   const [astronomyData, setAstronomyData] = useState(null);
@@ -42,7 +42,7 @@ export default function ForecastScreen() {
   // 错误态：false=正常 | 'network'=加载失败 | 'quota'=API 配额耗尽
   const [loadError, setLoadError] = useState(false);
 
-  const currentCity = { name: '北京' };
+  const currentCity = { name: lang === 'en' ? 'Beijing' : '北京' };
   const LOCATION = { lat: 39.9042, lng: 116.4074, cityId: '101010100', name: '北京市' };
 
   const maxTemp = useMemo(() => {
@@ -120,8 +120,9 @@ export default function ForecastScreen() {
       setAqiData(aqi);
       setUvData(uv);
     } catch {
-      setAqiData({ aqi: 75, category: '良', primaryPollutant: 'PM2.5' });
-      setUvData({ uvIndex: 5, level: '中等', advice: '建议涂抹防晒霜，佩戴帽子' });
+      const en = lang === 'en';
+      setAqiData({ aqi: 75, category: en ? 'Moderate' : '良', primaryPollutant: 'PM2.5' });
+      setUvData({ uvIndex: 5, level: en ? 'Moderate' : '中等', advice: en ? 'Wear sunscreen and a hat' : '建议涂抹防晒霜，佩戴帽子' });
     }
   }
 
@@ -173,7 +174,7 @@ export default function ForecastScreen() {
         {/* ═══ 1. 天气横幅 ═══ */}
         <View style={styles.weatherBanner}>
           <View style={styles.bannerHeader}>
-            <Text style={styles.bannerCity}>{currentCity?.name || '北京'}</Text>
+            <Text style={styles.bannerCity}>{currentCity.name}</Text>
             <Text style={styles.bannerUpdate}>{t('forecast.liveUpdate')}</Text>
           </View>
           <View style={styles.bannerMain}>

@@ -14,6 +14,53 @@
 
 import SunCalc from 'suncalc';
 import { getCachedData, setCachedData, isCacheValid } from './cache.ts';
+import { useI18n } from './i18n';
+
+// 数据层文本语言跟随 i18n（月相名、星座名）
+function dataLang(): 'zh' | 'en' {
+  try {
+    return (useI18n.getState() as any).lang === 'en' ? 'en' : 'zh';
+  } catch {
+    return 'zh';
+  }
+}
+
+// 月相名 zh → en
+const MOON_PHASE_EN: Record<string, string> = {
+  '新月': 'New Moon',
+  '蛾眉月': 'Waxing Crescent',
+  '上弦月': 'First Quarter',
+  '盈凸月': 'Waxing Gibbous',
+  '满月': 'Full Moon',
+  '亏凸月': 'Waning Gibbous',
+  '下弦月': 'Last Quarter',
+  '残月': 'Waning Crescent',
+};
+function localizeMoonPhase(zh: string): string {
+  return dataLang() === 'en' ? (MOON_PHASE_EN[zh] || zh) : zh;
+}
+
+// 星座名 zh → en（查询仍以中文名为键，仅展示层本地化）
+const CONSTELLATION_EN: Record<string, string> = {
+  '猎户座': 'Orion',
+  '大熊座': 'Ursa Major',
+  '小熊座': 'Ursa Minor',
+  '仙后座': 'Cassiopeia',
+  '天鹅座': 'Cygnus',
+  '天琴座': 'Lyra',
+  '天蝎座': 'Scorpius',
+  '人马座': 'Sagittarius',
+  '金牛座': 'Taurus',
+  '双子座': 'Gemini',
+  '狮子座': 'Leo',
+  '处女座': 'Virgo',
+  '飞马座': 'Pegasus',
+  '仙女座': 'Andromeda',
+  '英仙座': 'Perseus',
+};
+function localizeConstellation(zh: string): string {
+  return dataLang() === 'en' ? (CONSTELLATION_EN[zh] || zh) : zh;
+}
 
 // ==================== 类型定义 ====================
 
@@ -158,8 +205,8 @@ export function getMoonPhase(date: Date): MoonPhase {
     // 计算月龄（从新月开始的天数）
     const moonAge = phaseData.phase * 29.53; // 朔望月周期约 29.53 天
     
-    // 获取月相名称
-    const phaseName = getMoonPhaseName(phaseData.phase);
+    // 获取月相名称（按界面语言本地化）
+    const phaseName = localizeMoonPhase(getMoonPhaseName(phaseData.phase));
     
     // 使用 getMoonPosition 获取实际距离
     let distance = 384400; // 默认平均距离
@@ -185,7 +232,7 @@ export function getMoonPhase(date: Date): MoonPhase {
     // 返回安全的 fallback 数据而非抛出异常，避免阻塞调用方
     return {
       phase: 0,
-      phaseName: '新月',
+      phaseName: localizeMoonPhase('新月'),
       illumination: 0,
       age: 0,
       distance: 384400,
@@ -599,7 +646,7 @@ export function getConstellationPosition(
     const setTime = visible ? new Date(date.getTime() + (12 - transitHour) * 60 * 60 * 1000) : null;
     
     return {
-      name: constellationName,
+      name: localizeConstellation(constellationName),
       altitude: Math.round(altitude * 10) / 10,
       azimuth: Math.round(azimuth * 10) / 10,
       visible,
@@ -610,7 +657,7 @@ export function getConstellationPosition(
   } catch (error) {
     console.error('计算星座位置失败:', error);
     return {
-      name: constellationName,
+      name: localizeConstellation(constellationName),
       altitude: 0,
       azimuth: 0,
       visible: false,

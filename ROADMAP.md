@@ -54,7 +54,7 @@
 
 | # | 任务 | 说明 |
 |---|------|------|
-| 2.1 | 英文版（i18n） | 🔶 框架提前落地（2026-08-04）：`services/i18n/`（zh/en 语言包 + zustand store + `{param}` 插值 + AsyncStorage 持久化），默认中文，「我的 → 设置 → 语言」点击切换；术语标准 `docs/translation-glossary.md`（主参考 AccuWeather）；已接入：profile 全量、首页、预报、社区、城市搜索、登录卡片、Tab 导航；和风 API lang 参数跟随界面语言（缓存按语言隔离）；待迁移：数据层文本（AQI 分类、UV 等级、月相 phaseName、星座名）与组件库零散文本 |
+| 2.1 | 英文版（i18n） | ✅ 2026-08-04 完成：`services/i18n/`（zh/en 语言包 + zustand store + `{param}` 插值 + AsyncStorage 持久化），默认中文，「我的 → 设置 → 语言」点击切换；术语标准 `docs/translation-glossary.md`（主参考 AccuWeather）；已接入：全部页面 + 和风 API lang 跟随（缓存按语言隔离）+ 数据层文本（AQI 按 EPA 命名、UV 按 WHO 命名、月相、星座、风向罗盘缩写、台风 JMA 分级、mock 文本）——i18n 全链路闭环，待用户实测 |
 | 2.2 | 设计一致性审计 | 四个Tab截图并排，统一圆角/间距/字体层级；暗色优先 |
 | 2.3 | 空状态与错误态 | ✅ 2026-08-04 完成（除定位被拒）：首页/预报页红色错误横幅+重试按钮，区分「加载失败（含无网络）」与「API 配额耗尽」（qweatherService 新增 wasQuotaExceeded 标记，402 置位/成功复位）；city-list 收藏为空时显示虚线引导框（原直接隐藏分组）；定位被拒暂不适用——App 采用手动选城市、未申请定位权限 |
 | 2.4 | 合规文档 | 隐私政策（公开URL）、账号删除入口、GDPR Data Safety 表单、举报入口、W-8BEN |

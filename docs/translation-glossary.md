@@ -166,7 +166,7 @@
 
 ## 八、已知未迁移项登记（2026-08-04 第二轮）
 
-以下文本仍由数据层/mock 直接产出中文，界面切换英文时不翻译，待后续统一处理：
+> **2026-08-04 第五轮更新：以下各项已全部完成迁移**（见第十一节），本节仅留档。
 
 | 来源 | 内容 | 位置 |
 |------|------|------|
@@ -201,3 +201,38 @@
 | API 配额已用尽，暂显示参考数据 | API quota reached — showing sample data | quota reached 比 exhausted 简洁 |
 | 重试 | Retry | |
 | 暂无收藏，点城市卡片上的星标即可添加 | No saved locations yet — tap the star on a city card | 空态引导，yet 软化语气 |
+
+---
+
+## 十一、数据层术语文本（2026-08-04 第五轮，service 层映射）
+
+**AQI 分类**（US EPA 标准命名，与 AccuWeather 一致）：
+
+| 中文 | 英文 |
+|------|------|
+| 优 / 良 | Good / Moderate |
+| 轻度污染 | Unhealthy for Sensitive Groups |
+| 中度污染 / 重度污染 / 严重污染 | Unhealthy / Very Unhealthy / Hazardous |
+| 未知 / 无（首要污染物） | Unknown / None |
+
+**UV 等级**（WHO 命名）：
+
+| 中文 | 英文 |
+|------|------|
+| 最弱 / 弱 / 中等 | Low / Moderate / Moderate |
+| 强 / 很强 / 极强 | High / Very High / Extreme |
+
+**月相**：
+
+| 中文 | 英文 |
+|------|------|
+| 新月 / 满月 | New Moon / Full Moon |
+| 蛾眉月 / 残月 | Waxing Crescent / Waning Crescent |
+| 上弦月 / 下弦月 | First Quarter / Last Quarter |
+| 盈凸月 / 亏凸月 | Waxing Gibbous / Waning Gibbous |
+
+**星座**（示例）：猎户座 Orion、大熊座 Ursa Major、仙后座 Cassiopeia、天鹅座 Cygnus、天琴座 Lyra、天蝎座 Scorpius——全称不缩写，Title Case。
+
+**风向**：中文「西南风」→ 英文罗盘缩写 SW（16 方位制），与 AccuWeather 风向缩写一致。
+
+**台风等级**：热带低压 Tropical Depression、热带风暴 Tropical Storm、强热带风暴 Severe Tropical Storm、台风 Typhoon、强台风 Severe Typhoon（JMA 分级全称）。

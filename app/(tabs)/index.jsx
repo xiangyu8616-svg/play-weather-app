@@ -71,13 +71,14 @@ const SHOOT_QUALITY_COLORS = {
   poor: TextColor.muted,
 };
 
-function getUVLevel(index) {
+function getUVLevel(index, lang = 'zh') {
+  const en = lang === 'en';
   const i = parseInt(index) || 0;
-  if (i <= 2) return { label: '低', color: Accent.success };
-  if (i <= 5) return { label: '中等', color: Accent.star };
-  if (i <= 7) return { label: '高', color: '#FF9F0A' };
-  if (i <= 10) return { label: '很高', color: Accent.danger };
-  return { label: '极高', color: '#BF5AF2' };
+  if (i <= 2) return { label: en ? 'Low' : '低', color: Accent.success };
+  if (i <= 5) return { label: en ? 'Moderate' : '中等', color: Accent.star };
+  if (i <= 7) return { label: en ? 'High' : '高', color: '#FF9F0A' };
+  if (i <= 10) return { label: en ? 'Very High' : '很高', color: Accent.danger };
+  return { label: en ? 'Extreme' : '极高', color: '#BF5AF2' };
 }
 
 // 天气文本 → Ionicons 图标名：已迁移至 services/weather/weatherIcons.js
@@ -353,7 +354,7 @@ export default function HomeScreen() {
   const todayLow = Math.round(parseInt(todayForecast?.tempMin) || 20);
   const score = photoScore || 0;
   const scoreLabel = getScoreLabel(score);
-  const uv = getUVLevel(uvIndex);
+  const uv = getUVLevel(uvIndex, lang);
 
   // ── 极光可见性判断（1.6：接入 NOAA 真实 Kp）──
   // 纬度门槛：当前城市看到极光所需的最小 Kp

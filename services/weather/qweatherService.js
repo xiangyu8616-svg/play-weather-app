@@ -54,6 +54,23 @@ export function wasQuotaExceeded() {
   return quotaExceeded;
 }
 
+// Mock 文本 zh → en（真实 API 已随 lang 参数返回英文，此处仅覆盖 mock 回退）
+const WIND_DIR_EN = {
+  '南风': 'S', '西南风': 'SW', '西风': 'W', '西北风': 'NW',
+  '北风': 'N', '东北风': 'NE', '东风': 'E', '东南风': 'SE',
+};
+const WEATHER_TEXT_EN = {
+  '晴': 'Sunny', '多云': 'Cloudy', '阴': 'Overcast',
+  '小雨': 'Light Rain', '雷阵雨': 'Thunderstorm', '台风演示': 'Demo Typhoon',
+};
+const TYPHOON_TYPE_EN = {
+  '热带低压': 'Tropical Depression', '热带风暴': 'Tropical Storm',
+  '强热带风暴': 'Severe Tropical Storm', '台风': 'Typhoon', '强台风': 'Severe Typhoon',
+};
+function mockText(zh, table = WEATHER_TEXT_EN) {
+  return apiLang() === 'en' ? (table[zh] || zh) : zh;
+}
+
 // ==================== 类型定义 ====================
 
 /**
@@ -267,8 +284,8 @@ function generateMockNowWeather() {
     temp: '28',
     feelsLike: '30',
     icon: '101', // 多云
-    text: '多云',
-    windDir: '西南风',
+    text: mockText('多云'),
+    windDir: mockText('西南风', WIND_DIR_EN),
     windScale: '3',
     humidity: '65',
     precip: '0.0',
@@ -312,8 +329,8 @@ function generateMockDailyForecast(days = 7) {
       tempMax: tpl.tempMax,
       tempMin: tpl.tempMin,
       iconDay: tpl.icon,
-      textDay: tpl.text,
-      windDirDay: tpl.windDir,
+      textDay: mockText(tpl.text),
+      windDirDay: mockText(tpl.windDir, WIND_DIR_EN),
       windScaleDay: tpl.windScale,
       humidity: tpl.humidity,
       precip: tpl.precip,
@@ -345,7 +362,7 @@ function generateMockHourlyForecast() {
       fxTime: d.toISOString(),
       temp: String(temp),
       icon: '100',
-      text: textTemplates[hour % textTemplates.length],
+      text: mockText(textTemplates[hour % textTemplates.length]),
       pop: String(hour >= 18 && hour <= 21 ? 30 : 5),
       humidity: '65',
       windScale: '3',
@@ -365,9 +382,9 @@ function generateMockTyphoonList() {
   return [
     {
       stormId: '202401',
-      name: '台风演示',
+      name: mockText('台风演示'),
       basin: 'NP',
-      status: '演示数据',
+      status: apiLang() === 'en' ? 'Demo Data' : '演示数据',
       maxWindSpeed: '52',
       minPressure: '955',
     },
@@ -401,7 +418,7 @@ function generateMockTyphoonTrack() {
     time: new Date(baseTime + i * 6 * 60 * 60 * 1000).toISOString(),
     lat: pt.lat.toFixed(1),
     lon: pt.lon.toFixed(1),
-    type: pt.type,
+    type: mockText(pt.type, TYPHOON_TYPE_EN),
     pressure: pt.pressure,
     windSpeed: pt.windSpeed,
     moveSpeed: pt.moveSpeed,

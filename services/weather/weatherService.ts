@@ -13,8 +13,59 @@
 import axios from 'axios';
 import { getCachedData, setCachedData, isCacheValid } from '../cache.ts';
 import { QWEATHER_KEY, API_CONFIG } from '../../config/apiKeys';
+import { useI18n } from '../i18n';
 
 // ==================== 配置 ====================
+
+// 数据层文本语言跟随 i18n（参照 qweatherService 的 apiLang 模式）
+function dataLang(): 'zh' | 'en' {
+  try {
+    return (useI18n.getState() as any).lang === 'en' ? 'en' : 'zh';
+  } catch {
+    return 'zh';
+  }
+}
+
+// AQI 分类 zh → en（US EPA 标准命名，与 AccuWeather 一致）
+const AQI_CATEGORY_EN: Record<string, string> = {
+  '优': 'Good',
+  '良': 'Moderate',
+  '轻度污染': 'Unhealthy for Sensitive Groups',
+  '中度污染': 'Unhealthy',
+  '重度污染': 'Very Unhealthy',
+  '严重污染': 'Hazardous',
+  '未知': 'Unknown',
+};
+function localizeAqiCategory(zh: string): string {
+  return dataLang() === 'en' ? (AQI_CATEGORY_EN[zh] || 'Unknown') : zh;
+}
+function localizePrimaryPollutant(zh: string): string {
+  return dataLang() === 'en' && zh === '无' ? 'None' : zh;
+}
+
+// UV 等级/建议（WHO 命名：Low / Moderate / High / Very High / Extreme）
+interface UvText { level: string; category: string; advice: string; }
+function localizeUvText(uvIndex: number): UvText {
+  const en = dataLang() === 'en';
+  if (uvIndex <= 2) return en
+    ? { level: 'Low', category: 'Safe', advice: 'No protection needed' }
+    : { level: '最弱', category: '安全', advice: '不需要防护措施' };
+  if (uvIndex <= 4) return en
+    ? { level: 'Moderate', category: 'Mostly Safe', advice: 'Wear sunscreen when outside' }
+    : { level: '弱', category: '较安全', advice: '外出建议涂擦防晒霜' };
+  if (uvIndex <= 6) return en
+    ? { level: 'Moderate', category: 'Moderate', advice: 'Wear a hat and sunscreen outside' }
+    : { level: '中等', category: '中等', advice: '外出建议戴遮阳帽、涂防晒霜' };
+  if (uvIndex <= 8) return en
+    ? { level: 'High', category: 'High', advice: 'Avoid prolonged sun exposure; use SPF30+ sunscreen' }
+    : { level: '强', category: '较强', advice: '避免长时间暴露在阳光下，涂擦 SPF30+ 防晒霜' };
+  if (uvIndex <= 10) return en
+    ? { level: 'Very High', category: 'Very High', advice: 'Avoid going out; take extra protection if you must' }
+    : { level: '很强', category: '强', advice: '尽量避免外出，必须外出时加强防护' };
+  return en
+    ? { level: 'Extreme', category: 'Extreme', advice: 'Stay indoors and avoid going out' }
+    : { level: '极强', category: '极强', advice: '尽量待在室内，避免外出' };
+}
 
 // BFF 模式：USE_BFF 时走 /api/weather 代理，否则直接 key
 const USE_BFF = QWEATHER_KEY === 'USE_BFF';
@@ -273,7 +324,7 @@ export interface UVIndexData {
  */
 export async function getAQI(locationId: string): Promise<AQIData> {
   try {
-    const cacheKey = `weather:aqi:${locationId}`;
+    const cacheKey = `${dataLang()}:weather:aqi:${locationId}`;
     if (await isCacheValid(cacheKey, 60 * 60 * 1000)) {
       return getCachedData(cacheKey);
     }
@@ -285,11 +336,11 @@ export async function getAQI(locationId: string): Promise<AQIData> {
     if (response.data.code === '200') {
       const airData = response.data.now;
       
-      // 格式化 AQI 数据
+      // 格式化 AQI 数据（分类/首要污染物按界面语言本地化）
       const aqiData: AQIData = {
         aqi: parseInt(airData.aqi) || 0,
-        category: airData.category || '未知',
-        primaryPollutant: airData.primary || '无',
+        category: localizeAqiCategory(airData.category || '未知'),
+        primaryPollutant: localizePrimaryPollutant(airData.primary || '无'),
         pm2p5: airData.pm2p5 || '0',
         pm10: airData.pm10 || '0',
         co: airData.co || '0',
@@ -309,8 +360,8 @@ export async function getAQI(locationId: string): Promise<AQIData> {
     // 返回默认值
     return {
       aqi: 50,
-      category: '良',
-      primaryPollutant: '无',
+      category: localizeAqiCategory('良'),
+      primaryPollutant: localizePrimaryPollutant('无'),
       pm2p5: '35',
       pm10: '50',
       co: '0.5',
@@ -329,7 +380,7 @@ export async function getAQI(locationId: string): Promise<AQIData> {
  */
 export async function getUVIndex(locationId: string): Promise<UVIndexData> {
   try {
-    const cacheKey = `weather:uv:${locationId}`;
+    const cacheKey = `${dataLang()}:weather:uv:${locationId}`;
     if (await isCacheValid(cacheKey, 60 * 60 * 1000)) {
       return getCachedData(cacheKey);
     }
@@ -341,38 +392,9 @@ export async function getUVIndex(locationId: string): Promise<UVIndexData> {
     if (response.data.code === '200') {
       const uvData = response.data.now;
       
-      // 格式化紫外线数据
+      // 格式化紫外线数据（等级/建议按界面语言本地化）
       const uvIndex = parseInt(uvData.uv) || 0;
-      let level = '';
-      let category = '';
-      let advice = '';
-      
-      // 根据 UV 指数判断等级
-      if (uvIndex <= 2) {
-        level = '最弱';
-        category = '安全';
-        advice = '不需要防护措施';
-      } else if (uvIndex <= 4) {
-        level = '弱';
-        category = '较安全';
-        advice = '外出建议涂擦防晒霜';
-      } else if (uvIndex <= 6) {
-        level = '中等';
-        category = '中等';
-        advice = '外出建议戴遮阳帽、涂防晒霜';
-      } else if (uvIndex <= 8) {
-        level = '强';
-        category = '较强';
-        advice = '避免长时间暴露在阳光下，涂擦 SPF30+ 防晒霜';
-      } else if (uvIndex <= 10) {
-        level = '很强';
-        category = '强';
-        advice = '尽量避免外出，必须外出时加强防护';
-      } else {
-        level = '极强';
-        category = '极强';
-        advice = '尽量待在室内，避免外出';
-      }
+      const { level, category, advice } = localizeUvText(uvIndex);
       
       const formattedData: UVIndexData = {
         uvIndex,
@@ -390,11 +412,12 @@ export async function getUVIndex(locationId: string): Promise<UVIndexData> {
   } catch (error) {
     console.error('获取紫外线指数失败:', error);
     // 返回默认值
+    const fallback = localizeUvText(3);
     return {
       uvIndex: 3,
-      level: '中等',
-      category: '中等',
-      advice: '外出建议戴遮阳帽、涂防晒霜',
+      level: fallback.level,
+      category: fallback.category,
+      advice: fallback.advice,
       updateTime: new Date().toISOString()
     };
   }
