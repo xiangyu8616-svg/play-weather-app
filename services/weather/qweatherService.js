@@ -47,6 +47,13 @@ function apiLang() {
   }
 }
 
+// 配额超限标记：402 触发后置 true，成功响应后复位
+// UI 层据此区分「配额耗尽」与「网络/其他错误」展示不同提示
+let quotaExceeded = false;
+export function wasQuotaExceeded() {
+  return quotaExceeded;
+}
+
 // ==================== 类型定义 ====================
 
 /**
@@ -174,6 +181,7 @@ async function fetchWithCache(url, cacheKey, cacheTTL, useMockFallback = false, 
       
       // 配额超限 (402)
       if (response.status === 402) {
+        quotaExceeded = true;
         console.warn(`[qweather] 配额超限，尝试使用缓存或 Mock 数据`);
         if (getMockData) {
           const mockData = getMockData();
@@ -189,6 +197,9 @@ async function fetchWithCache(url, cacheKey, cacheTTL, useMockFallback = false, 
     const data = await response.json();
 
     // 3. 检查 API 返回码
+    if (data.code === '200') {
+      quotaExceeded = false; // 成功响应，复位配额标记
+    }
     if (data.code !== '200') {
       // 如果是缓存键存在，尝试使用旧缓存
       const oldCached = await getCachedData(cacheKey);
@@ -725,6 +736,7 @@ export default {
   getHourlyForecast,
   getTyphoonList,
   getTyphoonTrack,
+  wasQuotaExceeded,
   // 导出生成器供外部使用
   generateMockNowWeather,
   generateMockDailyForecast,

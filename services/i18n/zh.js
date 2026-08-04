@@ -95,6 +95,12 @@ export default {
     subtitle: '我们正在打造摄影天气社区，敬请期待',
     backHome: '返回首页',
   },
+  states: {
+    loadFailed: '数据加载失败，已显示参考数据',
+    quotaExceeded: 'API 配额已用尽，暂显示参考数据',
+    retry: '重试',
+    savedEmpty: '暂无收藏，点城市卡片上的星标即可添加',
+  },
   auth: {
     emailTitle: '📮 邮箱登录',
     emailDesc: '输入邮箱，接收 6 位验证码（无需密码）',

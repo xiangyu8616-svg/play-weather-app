@@ -94,6 +94,12 @@ export default {
     subtitle: "We're building a community for weather photography. Stay tuned",
     backHome: 'Back to Home',
   },
+  states: {
+    loadFailed: "Couldn't load data — showing sample data",
+    quotaExceeded: 'API quota reached — showing sample data',
+    retry: 'Retry',
+    savedEmpty: 'No saved locations yet — tap the star on a city card',
+  },
   auth: {
     emailTitle: '📮 Sign in with Email Code',
     emailDesc: 'Enter your email to receive a 6-digit code (no password needed)',

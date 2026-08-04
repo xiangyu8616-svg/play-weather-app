@@ -190,3 +190,14 @@
 | 史诗级 / 优秀 / 良好 / 一般 / 较差 | Epic / Excellent / Good / Fair / Poor | 质量等级，Title Case；Epic 呼应霞光预测圈（如 SunsetWx）用法 |
 | 建议朝西 / 朝东 | face west / face east | 小写，句末 |
 | 拍摄窗口即将开始 | Shooting window starting soon | 通知标题（通知正文里窗口用 shooting window，卡片标题用 Photo Window：标题求简，通知求明确） |
+
+---
+
+## 十、状态提示术语（2026-08-04 第四轮，states 命名空间）
+
+| 中文 | 英文（本项目标准） | 备注 |
+|------|-------------------|------|
+| 数据加载失败，已显示参考数据 | Couldn't load data — showing sample data | 错误横幅文案；「参考数据」译 sample data 而非 mock data（面向用户） |
+| API 配额已用尽，暂显示参考数据 | API quota reached — showing sample data | quota reached 比 exhausted 简洁 |
+| 重试 | Retry | |
+| 暂无收藏，点城市卡片上的星标即可添加 | No saved locations yet — tap the star on a city card | 空态引导，yet 软化语气 |

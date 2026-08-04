@@ -39,6 +39,8 @@ export default function ForecastScreen() {
   const [uvData, setUvData] = useState(null);
   const [nowWeather, setNowWeather] = useState(null);
   const [dailyForecast, setDailyForecast] = useState([]);
+  // 错误态：false=正常 | 'network'=加载失败 | 'quota'=API 配额耗尽
+  const [loadError, setLoadError] = useState(false);
 
   const currentCity = { name: '北京' };
   const LOCATION = { lat: 39.9042, lng: 116.4074, cityId: '101010100', name: '北京市' };
@@ -84,14 +86,18 @@ export default function ForecastScreen() {
 
   async function loadWeatherData() {
     try {
+      setLoadError(false);
       const [weather, forecast] = await Promise.all([
         qweatherService.getNowWeather(LOCATION.cityId),
         qweatherService.getDailyForecast(LOCATION.cityId, 7),
       ]);
       setNowWeather(weather);
       setDailyForecast(forecast);
+      // 服务层内部回退 mock 时不抛错，这里显式检查配额标记
+      if (qweatherService.wasQuotaExceeded()) setLoadError('quota');
     } catch (error) {
       console.error('加载天气数据失败:', error);
+      setLoadError('network');
       setNowWeather(qweatherService.generateMockNowWeather());
       setDailyForecast(qweatherService.generateMockDailyForecast());
     } finally {
@@ -142,6 +148,27 @@ export default function ForecastScreen() {
   return (
     <LinearGradient colors={bgColors} style={styles.container} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+        {/* ═══ 0. 错误横幅（加载失败/配额耗尽，可重试）═══ */}
+        {!!loadError && (
+          <View style={styles.errorBanner}>
+            <Ionicons
+              name={loadError === 'quota' ? 'speedometer-outline' : 'cloud-offline-outline'}
+              size={16}
+              color={Accent.danger}
+            />
+            <Text style={styles.errorBannerText} numberOfLines={2}>
+              {loadError === 'quota' ? t('states.quotaExceeded') : t('states.loadFailed')}
+            </Text>
+            <TouchableOpacity
+              style={styles.errorRetryBtn}
+              onPress={() => { loadWeatherData(); loadAstronomyData(); }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.errorRetryText}>{t('states.retry')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* ═══ 1. 天气横幅 ═══ */}
         <View style={styles.weatherBanner}>
@@ -276,6 +303,36 @@ function EnvItem({ label, value, sub, color, icon }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingBottom: 100 },
+
+  // ── 错误横幅 ──
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255, 68, 68, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 68, 68, 0.25)',
+    borderRadius: Radius.md,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: FontSize.caption,
+    color: TextColor.secondary,
+  },
+  errorRetryBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radius.sm,
+    backgroundColor: 'rgba(255, 68, 68, 0.15)',
+  },
+  errorRetryText: {
+    fontSize: FontSize.caption,
+    fontWeight: FontWeight.semiBold,
+    color: Accent.danger,
+  },
 
   // ── 天气横幅 ──
   weatherBanner: {

@@ -106,6 +106,7 @@ export default function HomeScreen() {
   const [currentCity, setCurrentCity] = useState({ name: '北京', id: '101010100' });
   const [nowWeather, setNowWeather] = useState(null);
   const [dailyForecast, setDailyForecast] = useState([]);
+  // 错误态：false=正常 | 'network'=加载失败（含无网络）| 'quota'=API 配额耗尽
   const [loadError, setLoadError] = useState(false);
   const searchInputRef = useRef(null);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -260,9 +261,11 @@ export default function HomeScreen() {
       setHourlyForecast(hourly);
       setKpData(kp);
       setAqiData(generateMockAqi());
+      // 服务层内部回退 mock 时不抛错，这里显式检查配额标记
+      if (qweatherService.wasQuotaExceeded()) setLoadError('quota');
     } catch (error) {
       console.error('加载天气数据失败:', error);
-      setLoadError(true);
+      setLoadError('network');
       const mockWeather = qweatherService.generateMockNowWeather();
       const mockForecast = qweatherService.generateMockDailyForecast();
       setNowWeather(mockWeather);
@@ -415,6 +418,29 @@ export default function HomeScreen() {
               autoCorrect={false}
             />
           </View>
+
+          {/* ═══════════════════════════════════════════
+              1.5 错误横幅（加载失败/配额耗尽，可重试）
+          ═══════════════════════════════════════════ */}
+          {!!loadError && (
+            <View style={styles.errorBanner}>
+              <Ionicons
+                name={loadError === 'quota' ? 'speedometer-outline' : 'cloud-offline-outline'}
+                size={16}
+                color={Accent.danger}
+              />
+              <Text style={styles.errorBannerText} numberOfLines={2}>
+                {loadError === 'quota' ? t('states.quotaExceeded') : t('states.loadFailed')}
+              </Text>
+              <TouchableOpacity
+                style={styles.errorRetryBtn}
+                onPress={() => loadWeatherData(currentCity.id)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.errorRetryText}>{t('states.retry')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* ═══════════════════════════════════════════
               2. 核心卡片：极光可见性
@@ -862,6 +888,35 @@ const styles = StyleSheet.create({
     ...CardStyle,
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.md,
+  },
+
+  // ── 错误横幅 ──
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255, 68, 68, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 68, 68, 0.25)',
+    borderRadius: Radius.md,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: FontSize.caption,
+    color: TextColor.secondary,
+  },
+  errorRetryBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radius.sm,
+    backgroundColor: 'rgba(255, 68, 68, 0.15)',
+  },
+  errorRetryText: {
+    fontSize: FontSize.caption,
+    fontWeight: FontWeight.semiBold,
+    color: Accent.danger,
   },
 
   // ── 今日拍摄窗口 ──

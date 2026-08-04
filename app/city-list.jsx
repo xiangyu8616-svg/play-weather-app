@@ -186,7 +186,7 @@ export default function CityListScreen() {
         ) : (
           <FlatList
             data={[
-              ...(savedLocations.length > 0 ? [{ title: t('cityList.mySaved'), data: savedLocations }] : []),
+              { title: t('cityList.mySaved'), data: savedLocations, showEmpty: savedLocations.length === 0 },
               { title: t('cityList.auroraHot'), data: AURORA_CITIES },
               { title: t('cityList.hotCities'), data: HOT_CITIES },
             ]}
@@ -194,6 +194,12 @@ export default function CityListScreen() {
             renderItem={({ item }) => (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>{item.title}</Text>
+                {item.showEmpty ? (
+                  <View style={styles.savedEmptyBox}>
+                    <Ionicons name="star-outline" size={18} color={TextColor.muted} />
+                    <Text style={styles.savedEmptyText}>{t('states.savedEmpty')}</Text>
+                  </View>
+                ) : (
                 <View style={styles.grid}>
                   {item.data.map((city) => (
                     <TouchableOpacity
@@ -220,6 +226,7 @@ export default function CityListScreen() {
                     </TouchableOpacity>
                   ))}
                 </View>
+                )}
               </View>
             )}
             contentContainerStyle={styles.listContent}
@@ -368,5 +375,19 @@ const styles = StyleSheet.create({
     fontSize: FontSize.body,
     color: TextColor.muted,
     marginTop: Spacing.md,
+  },
+  savedEmptyBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: Radius.md,
+  },
+  savedEmptyText: {
+    flex: 1,
+    fontSize: FontSize.caption,
+    color: TextColor.muted,
   },
 });
