@@ -1,6 +1,7 @@
 /**
  * 中文语言包（默认）
  * key 结构：按页面/模块命名空间组织，与 en.js 保持完全对齐
+ * 术语标准：docs/translation-glossary.md
  */
 export default {
   tabs: {
@@ -13,8 +14,8 @@ export default {
     heroTitle: '今晚能看到极光吗？',
     visible: '可见',
     notVisible: '不可见',
-    kpSubtitleLive: '今晚 KP 峰值 {kp} · 本地需 KP≥{required}',
-    kpSubtitleFallback: 'KP {required} → {status}',
+    kpSubtitleLive: '今晚 Kp 峰值 {kp} · 本地需 Kp≥{required}',
+    kpSubtitleFallback: 'Kp {required} → {status}',
     kpNeedHigher: '需更高指数',
     probability: '极光概率 {p}%',
     metricCloud: '云量',
@@ -42,6 +43,26 @@ export default {
     glow: '霞光概率',
     glowMeta: '朝霞 {sunrise}% · 晚霞 {sunset}%',
     globeTitle: '全球视角',
+    defaultCondition: '多云',
+    windLevelSuffix: '级',
+  },
+  forecast: {
+    loading: '加载天气数据...',
+    liveUpdate: '实时更新',
+    feelsLike: '体感 {t}°',
+    lightTitle: '今日光质',
+    goldenLegend: '黄金时刻 {range}',
+    blueLegend: '蓝调时刻 {range}',
+    days7: '7天预报',
+    today: '今天',
+    tomorrow: '明天',
+    weekdays: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'],
+    windLevel: '{dir}{scale}级',
+    envTitle: '环境指数',
+    humidity: '湿度',
+    wind: '风速',
+    comfort: '舒适',
+    defaultCondition: '多云',
   },
   cityList: {
     title: '选择城市',
@@ -50,6 +71,27 @@ export default {
     auroraHot: '极光观测热门',
     hotCities: '热门城市',
     notFound: '未找到城市',
+  },
+  community: {
+    comingSoon: '社区即将上线',
+    subtitle: '我们正在打造摄影天气社区，敬请期待',
+    backHome: '返回首页',
+  },
+  auth: {
+    emailTitle: '📮 邮箱登录',
+    emailDesc: '输入邮箱，接收 6 位验证码（无需密码）',
+    codeSent: '验证码已发送至 {email}，10 分钟内有效',
+    codePlaceholder: '6 位验证码',
+    sendCode: '发送验证码',
+    signIn: '登录',
+    changeEmail: '换个邮箱',
+    resend: '重新发送',
+    resendCooldown: '重新发送（{s}s）',
+    agreement: '登录即代表同意用户协议与隐私政策',
+    sendFailed: '发送失败，请稍后重试',
+    invalidCode: '验证码错误或已过期',
+    appleSignIn: '使用 Apple 登录',
+    googleSignIn: '使用 Google 登录',
   },
   profile: {
     appName: '摄影爱好者',

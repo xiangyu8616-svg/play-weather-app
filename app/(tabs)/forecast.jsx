@@ -5,6 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import qweatherService from '../../services/weather/qweatherService';
 import astronomyService from '../../services/astronomyService';
 import weatherService from '../../services/weather/weatherService';
+import { getWeatherIconName } from '../../services/weather/weatherIcons';
+import { useI18n } from '../../services/i18n';
 import {
   Bg, Accent, TextColor, Spacing, Radius,
   FontSize, FontWeight, FontFamily, auroraAlpha, whiteAlpha,
@@ -24,21 +26,12 @@ function getAqiColor(aqi) {
   return '#8B0000';
 }
 
-function getWeatherIconName(text) {
-  const t = (text || '').toLowerCase();
-  if (t.includes('晴')) return 'sunny';
-  if (t.includes('多云')) return 'partly-sunny';
-  if (t.includes('阴')) return 'cloudy';
-  if (t.includes('雨')) return 'rainy';
-  if (t.includes('雪')) return 'snow';
-  return 'cloud';
-}
-
 // ═══════════════════════════════════════════
 // 主组件
 // ═══════════════════════════════════════════
 
 export default function ForecastScreen() {
+  const { t } = useI18n();
   const [selectedDay, setSelectedDay] = useState(0);
   const [loading, setLoading] = useState(true);
   const [astronomyData, setAstronomyData] = useState(null);
@@ -61,10 +54,10 @@ export default function ForecastScreen() {
   }, [dailyForecast]);
 
   const formatDay = (dateStr, index) => {
-    if (index === 0) return '今天';
-    if (index === 1) return '明天';
+    if (index === 0) return t('forecast.today');
+    if (index === 1) return t('forecast.tomorrow');
     const date = new Date(dateStr);
-    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    const weekdays = t('forecast.weekdays');
     return weekdays[date.getDay()];
   };
 
@@ -76,12 +69,12 @@ export default function ForecastScreen() {
   const forecastData = (dailyForecast || []).map((item, index) => ({
     day: formatDay(item.fxDate, index),
     date: formatDate(item.fxDate),
-    condition: item.textDay || '多云',
+    condition: item.textDay || t('forecast.defaultCondition'),
     high: parseInt(item.tempMax) || 0,
     low: parseInt(item.tempMin) || 0,
     rain: Math.min(100, Math.round(parseFloat(item.precip || 0) * 10)),
-    wind: `${item.windDirDay || ''}${item.windScaleDay || ''}级`,
-    icon: getWeatherIconName(item.textDay),
+    wind: t('forecast.windLevel', { dir: item.windDirDay || '', scale: item.windScaleDay || '' }),
+    icon: getWeatherIconName(item.textDay, false, item.iconDay),
   }));
 
   useEffect(() => {
@@ -137,7 +130,7 @@ export default function ForecastScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: Bg.primary, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={Accent.aurora} />
-        <Text style={{ color: TextColor.secondary, marginTop: 12 }}>加载天气数据...</Text>
+        <Text style={{ color: TextColor.secondary, marginTop: 12 }}>{t('forecast.loading')}</Text>
       </View>
     );
   }
@@ -154,18 +147,18 @@ export default function ForecastScreen() {
         <View style={styles.weatherBanner}>
           <View style={styles.bannerHeader}>
             <Text style={styles.bannerCity}>{currentCity?.name || '北京'}</Text>
-            <Text style={styles.bannerUpdate}>实时更新</Text>
+            <Text style={styles.bannerUpdate}>{t('forecast.liveUpdate')}</Text>
           </View>
           <View style={styles.bannerMain}>
             <Text style={styles.bannerTemp}>{temp}°</Text>
             <View style={styles.bannerCondition}>
-              <Ionicons name={getWeatherIconName(nowWeather?.text)} size={20} color={getWeatherIconColor(nowWeather?.text)} />
-              <Text style={styles.bannerConditionText}>{nowWeather?.text || '晴间多云'}</Text>
+              <Ionicons name={getWeatherIconName(nowWeather?.text, false, nowWeather?.icon)} size={20} color={getWeatherIconColor(nowWeather?.text)} />
+              <Text style={styles.bannerConditionText}>{nowWeather?.text || t('forecast.defaultCondition')}</Text>
             </View>
           </View>
           <View style={styles.bannerHiLo}>
             <Text style={styles.bannerHiLoText}>H:{Math.round(nowWeather?.tempMax || 32)}°  L:{Math.round(nowWeather?.tempMin || 18)}°</Text>
-            <Text style={styles.bannerFeels}>体感 {Math.round(parseInt(nowWeather?.feelsLike) || temp)}°</Text>
+            <Text style={styles.bannerFeels}>{t('forecast.feelsLike', { t: Math.round(parseInt(nowWeather?.feelsLike) || temp) })}</Text>
           </View>
         </View>
 
@@ -173,7 +166,7 @@ export default function ForecastScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="time-outline" size={16} color={Accent.star} />
-            <Text style={styles.cardTitle}>今日光质</Text>
+            <Text style={styles.cardTitle}>{t('forecast.lightTitle')}</Text>
           </View>
           {/* 时间段 */}
           <View style={styles.timelineLabels}>
@@ -193,11 +186,11 @@ export default function ForecastScreen() {
           <View style={styles.timelineLegend}>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: Accent.star }]} />
-              <Text style={styles.legendText}>黄金时刻 17:30-19:00</Text>
+              <Text style={styles.legendText}>{t('forecast.goldenLegend', { range: '17:30-19:00' })}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: '#60A5FA' }]} />
-              <Text style={styles.legendText}>蓝调时刻 19:00-19:45</Text>
+              <Text style={styles.legendText}>{t('forecast.blueLegend', { range: '19:00-19:45' })}</Text>
             </View>
           </View>
         </View>
@@ -206,7 +199,7 @@ export default function ForecastScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="calendar-outline" size={16} color={Accent.aurora} />
-            <Text style={styles.cardTitle}>7天预报</Text>
+            <Text style={styles.cardTitle}>{t('forecast.days7')}</Text>
           </View>
           {forecastData.slice(0, 7).map((day, i) => (
             <View key={i} style={[styles.dayRow, i === 6 && { borderBottomWidth: 0 }]}>
@@ -242,13 +235,13 @@ export default function ForecastScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="leaf-outline" size={16} color={Accent.success} />
-            <Text style={styles.cardTitle}>环境指数</Text>
+            <Text style={styles.cardTitle}>{t('forecast.envTitle')}</Text>
           </View>
           <View style={styles.envGrid}>
             <EnvItem label="AQI" value={aqiData?.aqi || '--'} sub={aqiData?.category || '--'} color={getAqiColor(aqiData?.aqi)} icon="skull-outline" />
             <EnvItem label="UV" value={uvData?.uvIndex || '--'} sub={uvData?.level || '--'} color={Accent.star} icon="sunny-outline" />
-            <EnvItem label="湿度" value={`${nowWeather?.humidity || '--'}%`} sub="舒适" color={TextColor.primary} icon="water-outline" />
-            <EnvItem label="风速" value={`${nowWeather?.windScale || '--'}级`} sub={nowWeather?.windDir || '--'} color={TextColor.primary} icon="speedometer-outline" />
+            <EnvItem label={t('forecast.humidity')} value={`${nowWeather?.humidity || '--'}%`} sub={t('forecast.comfort')} color={TextColor.primary} icon="water-outline" />
+            <EnvItem label={t('forecast.wind')} value={t('forecast.windLevel', { dir: '', scale: nowWeather?.windScale || '--' })} sub={nowWeather?.windDir || '--'} color={TextColor.primary} icon="speedometer-outline" />
           </View>
         </View>
 

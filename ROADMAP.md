@@ -54,7 +54,7 @@
 
 | # | 任务 | 说明 |
 |---|------|------|
-| 2.1 | 英文版（i18n） | 🔶 框架提前落地（2026-08-04）：`services/i18n/`（zh/en 语言包 + zustand store + `{param}` 插值 + AsyncStorage 持久化），默认中文，「我的 → 设置 → 语言」点击切换；已接入：profile 全量、首页、城市搜索、Tab 导航；待迁移：预报/社区页、登录卡片、组件库文本 |
+| 2.1 | 英文版（i18n） | 🔶 框架提前落地（2026-08-04）：`services/i18n/`（zh/en 语言包 + zustand store + `{param}` 插值 + AsyncStorage 持久化），默认中文，「我的 → 设置 → 语言」点击切换；术语标准 `docs/translation-glossary.md`（主参考 AccuWeather）；已接入：profile 全量、首页、预报、社区、城市搜索、登录卡片、Tab 导航；和风 API lang 参数跟随界面语言（缓存按语言隔离）；待迁移：数据层文本（AQI 分类、UV 等级、月相 phaseName、星座名）与组件库零散文本 |
 | 2.2 | 设计一致性审计 | 四个Tab截图并排，统一圆角/间距/字体层级；暗色优先 |
 | 2.3 | 空状态与错误态 | 定位被拒、API配额耗尽、无网络、收藏为空 |
 | 2.4 | 合规文档 | 隐私政策（公开URL）、账号删除入口、GDPR Data Safety 表单、举报入口、W-8BEN |

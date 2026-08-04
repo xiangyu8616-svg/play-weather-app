@@ -20,6 +20,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Spacing, Radius, FontSize, FontWeight, TextColor, whiteAlpha } from '../../styles/designTokens';
+import { useI18n } from '../../services/i18n';
 
 // 尝试动态导入，未安装时优雅降级
 let AppleAuthentication = null;
@@ -34,6 +35,7 @@ try {
 export default function SocialLoginButtons({ onApplePress, onGooglePress, loading }) {
   const [appleLoading, setAppleLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const { t } = useI18n();
 
   const isAppleAvailable = !!AppleAuthentication;
   const isGoogleAvailable = !!AuthSession;
@@ -85,7 +87,7 @@ export default function SocialLoginButtons({ onApplePress, onGooglePress, loadin
             <View style={styles.btnRow}>
               {/* Apple Logo 用 Unicode 字符代替（避免额外依赖） */}
               <Text style={styles.appleLogo}></Text>
-              <Text style={styles.appleText}>使用 Apple 登录</Text>
+              <Text style={styles.appleText}>{t('auth.appleSignIn')}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -104,7 +106,7 @@ export default function SocialLoginButtons({ onApplePress, onGooglePress, loadin
           ) : (
             <View style={styles.btnRow}>
               <Text style={styles.googleLogo}>G</Text>
-              <Text style={styles.googleText}>使用 Google 登录</Text>
+              <Text style={styles.googleText}>{t('auth.googleSignIn')}</Text>
             </View>
           )}
         </TouchableOpacity>

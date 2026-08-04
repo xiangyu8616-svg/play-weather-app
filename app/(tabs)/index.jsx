@@ -14,6 +14,7 @@ import qweatherService from '../../services/weather/qweatherService';
 import noaaService from '../../services/aurora/noaaService';
 import { useSavedLocationsStore } from '../../stores/savedLocationsStore';
 import { useI18n } from '../../services/i18n';
+import { getWeatherIconName } from '../../services/weather/weatherIcons';
 import {
   getPhotographyTimes, formatTime, getMoonPhase,
   getMilkyWayVisibility, getConstellationPosition, getSunPosition,
@@ -68,17 +69,8 @@ function getUVLevel(index) {
   return { label: '极高', color: '#BF5AF2' };
 }
 
-// 天气文本 → Ionicons 图标名（isNight 时晴/多云用夜间图标）
-function getWeatherIconName(text, isNight = false) {
-  const t = text || '';
-  if (t.includes('雷')) return 'thunderstorm-outline';
-  if (t.includes('雪') || t.includes('冰')) return 'snow-outline';
-  if (t.includes('雨') || t.includes('滴')) return 'rainy-outline';
-  if (t.includes('雾') || t.includes('霾') || t.includes('沙')) return 'cloudy-outline';
-  if (t.includes('阴')) return 'cloudy-outline';
-  if (t.includes('云') || t.includes('多')) return isNight ? 'cloudy-outline' : 'partly-sunny-outline';
-  return isNight ? 'moon-outline' : 'sunny-outline';
-}
+// 天气文本 → Ionicons 图标名：已迁移至 services/weather/weatherIcons.js
+// （icon code 优先，中英文本文本回退，本文件直接 import 使用）
 
 function generateMockAqi() {
   const aqi = Math.floor(Math.random() * 80 + 20);
@@ -420,8 +412,8 @@ export default function HomeScreen() {
             <View style={styles.weatherMain}>
               <Text style={styles.weatherTemp}>{temp}°</Text>
               <View style={styles.weatherCondition}>
-                <Ionicons name={getWeatherIconName(nowWeather?.text)} size={18} color={getWeatherIconColor(nowWeather?.text)} />
-                <Text style={styles.weatherText}>{nowWeather?.text || '晴间多云'}</Text>
+                <Ionicons name={getWeatherIconName(nowWeather?.text, false, nowWeather?.icon)} size={18} color={getWeatherIconColor(nowWeather?.text)} />
+                <Text style={styles.weatherText}>{nowWeather?.text || t('home.defaultCondition')}</Text>
               </View>
             </View>
             <View style={styles.weatherHiLo}>
@@ -602,7 +594,7 @@ function HourlyItem({ item, isNow }) {
     <View style={styles.hourlyItem}>
       <Text style={styles.hourlyHour}>{hourLabel}</Text>
       <Ionicons
-        name={getWeatherIconName(item.text, isNight)}
+        name={getWeatherIconName(item.text, isNight, item.icon)}
         size={18}
         color={getWeatherIconColor(item.text)}
       />

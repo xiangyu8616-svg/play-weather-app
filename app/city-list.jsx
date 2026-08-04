@@ -109,7 +109,7 @@ export default function CityListScreen() {
       <View style={styles.cityItemRight}>
         {item.kp && (
           <View style={styles.kpBadge}>
-            <Text style={styles.kpBadgeText}>KP{item.kp}</Text>
+            <Text style={styles.kpBadgeText}>Kp{item.kp}</Text>
           </View>
         )}
         <TouchableOpacity
@@ -215,7 +215,7 @@ export default function CityListScreen() {
                       </TouchableOpacity>
                       <Text style={styles.gridItemName}>{city.name}</Text>
                       {city.kp && (
-                        <Text style={styles.gridItemKp}>KP{city.kp}</Text>
+                        <Text style={styles.gridItemKp}>Kp{city.kp}</Text>
                       )}
                     </TouchableOpacity>
                   ))}

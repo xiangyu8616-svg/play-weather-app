@@ -10,11 +10,13 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator 
 import { Ionicons } from '@expo/vector-icons';
 import { Spacing, Radius, FontSize, FontWeight, Surface, Brand, TextColor, goldAlpha, whiteAlpha } from '../../styles/designTokens';
 import { useUserStore } from '../../stores/userStore';
+import { useI18n } from '../../services/i18n';
 
 const RESEND_COOLDOWN = 60; // 秒
 
 export default function EmailLoginCard({ footer }) {
   const { sendEmailCode, verifyEmailCode, sending, verifying } = useUserStore();
+  const { t } = useI18n();
 
   const [step, setStep] = useState('email'); // 'email' | 'code'
   const [email, setEmail] = useState('');
@@ -48,7 +50,7 @@ export default function EmailLoginCard({ footer }) {
       setStep('code');
       startCooldown();
     } else {
-      setError(res.error);
+      setError(res.errorKey ? t(res.errorKey) : res.error);
     }
   };
 
@@ -56,17 +58,17 @@ export default function EmailLoginCard({ footer }) {
     if (code.trim().length !== 6 || verifying) return;
     setError('');
     const res = await verifyEmailCode(email.trim(), code.trim());
-    if (!res.ok) setError(res.error);
+    if (!res.ok) setError(res.errorKey ? t(res.errorKey) : res.error);
     // 成功时 userStore 会更新 user，父组件自动切换为已登录视图
   };
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>📮 邮箱登录</Text>
+      <Text style={styles.title}>{t('auth.emailTitle')}</Text>
       <Text style={styles.desc}>
         {step === 'email'
-          ? '输入邮箱，接收 6 位验证码（无需密码）'
-          : `验证码已发送至 ${email}，10 分钟内有效`}
+          ? t('auth.emailDesc')
+          : t('auth.codeSent', { email })}
       </Text>
 
       {step === 'email' ? (
@@ -83,10 +85,10 @@ export default function EmailLoginCard({ footer }) {
       ) : (
         <TextInput
           style={[styles.input, styles.codeInput]}
-          placeholder="6 位验证码"
+          placeholder={t('auth.codePlaceholder')}
           placeholderTextColor={TextColor.Tertiary}
           value={code}
-          onChangeText={(t) => setCode(t.replace(/[^0-9]/g, '').slice(0, 6))}
+          onChangeText={(v) => setCode(v.replace(/[^0-9]/g, '').slice(0, 6))}
           keyboardType="number-pad"
           maxLength={6}
         />
@@ -104,7 +106,7 @@ export default function EmailLoginCard({ footer }) {
           {sending ? (
             <ActivityIndicator color="#1A1206" />
           ) : (
-            <Text style={styles.primaryBtnText}>发送验证码</Text>
+            <Text style={styles.primaryBtnText}>{t('auth.sendCode')}</Text>
           )}
         </TouchableOpacity>
       ) : (
@@ -118,17 +120,17 @@ export default function EmailLoginCard({ footer }) {
             {verifying ? (
               <ActivityIndicator color="#1A1206" />
             ) : (
-              <Text style={styles.primaryBtnText}>登录</Text>
+              <Text style={styles.primaryBtnText}>{t('auth.signIn')}</Text>
             )}
           </TouchableOpacity>
 
           <View style={styles.codeFooter}>
             <TouchableOpacity onPress={() => { setStep('email'); setCode(''); setError(''); }}>
-              <Text style={styles.linkText}>换个邮箱</Text>
+              <Text style={styles.linkText}>{t('auth.changeEmail')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleSend} disabled={cooldown > 0 || sending}>
               <Text style={[styles.linkText, cooldown > 0 && styles.linkDisabled]}>
-                {cooldown > 0 ? `重新发送（${cooldown}s）` : '重新发送'}
+                {cooldown > 0 ? t('auth.resendCooldown', { s: cooldown }) : t('auth.resend')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -137,7 +139,7 @@ export default function EmailLoginCard({ footer }) {
 
       <View style={styles.secureRow}>
         <Ionicons name="lock-closed-outline" size={12} color={TextColor.Tertiary} />
-        <Text style={styles.secureText}>登录即代表同意用户协议与隐私政策</Text>
+        <Text style={styles.secureText}>{t('auth.agreement')}</Text>
       </View>
 
       {footer}

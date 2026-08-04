@@ -76,7 +76,7 @@ export const useUserStore = create((set, get) => ({
       if (error) throw error;
       return { ok: true };
     } catch (e) {
-      return { ok: false, error: e?.message || '发送失败，请稍后重试' };
+      return { ok: false, error: e?.message || '发送失败，请稍后重试', errorKey: 'auth.sendFailed' };
     } finally {
       set({ sending: false });
     }
@@ -96,7 +96,7 @@ export const useUserStore = create((set, get) => ({
       get().refreshProfile();
       return { ok: true };
     } catch (e) {
-      return { ok: false, error: e?.message || '验证码错误或已过期' };
+      return { ok: false, error: e?.message || '验证码错误或已过期', errorKey: 'auth.invalidCode' };
     } finally {
       set({ verifying: false });
     }

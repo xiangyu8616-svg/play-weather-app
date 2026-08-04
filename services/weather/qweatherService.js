@@ -13,6 +13,7 @@
 import { QWEATHER_KEY, API_CONFIG, CACHE_TTL } from '../../config/apiKeys';
 import { getCachedData, setCachedData, isCacheValid } from '../cache';
 import { getToken } from '../authService';
+import { useI18n } from '../i18n';
 
 // ==================== 配置 ====================
 
@@ -36,6 +37,15 @@ const BFF_BASE = process.env.NODE_ENV === 'production'
 
 // 是否启用 BFF 模式（当 QWEATHER_KEY 为空或设置了环境变量时）
 const USE_BFF = !QWEATHER_KEY || QWEATHER_KEY === 'USE_BFF';
+
+// API 语言跟随 i18n 界面语言（和风支持 zh / en）
+function apiLang() {
+  try {
+    return useI18n.getState().lang === 'en' ? 'en' : 'zh';
+  } catch {
+    return API_CONFIG.lang || 'zh';
+  }
+}
 
 // ==================== 类型定义 ====================
 
@@ -111,20 +121,21 @@ const USE_BFF = !QWEATHER_KEY || QWEATHER_KEY === 'USE_BFF';
  * @returns 完整 URL
  */
 function buildUrl(baseUrl, endpoint, params = {}) {
+  const lang = apiLang();
   // BFF 模式下通过代理请求，不直接携带 API Key
   // endpoint 以 type 参数传给代理，由代理按白名单转发（含城市搜索 city/lookup）
   if (USE_BFF) {
     const searchParams = new URLSearchParams({
-      lang: API_CONFIG.lang || 'zh',
+      lang,
       type: endpoint.replace(/^\//, ''),
       ...params,
     });
     return `${BFF_BASE}/weather?${searchParams.toString()}`;
   }
-  
+
   const searchParams = new URLSearchParams({
     key: QWEATHER_KEY,
-    lang: API_CONFIG.lang || 'zh',
+    lang,
     ...params,
   });
   return `${baseUrl}${endpoint}?${searchParams.toString()}`;
@@ -534,7 +545,7 @@ function normalizeTyphoonTrack(apiData) {
  * @returns 城市列表
  */
 export async function searchCity(query, number = 5) {
-  const cacheKey = `city:${query}:${number}`;
+  const cacheKey = `${apiLang()}:city:${query}:${number}`;
   const cacheTTL = CACHE_TTL.location || 7 * 24 * 60 * 60 * 1000;
   
   const url = buildUrl(GEO_API_BASE, '/city/lookup', {
@@ -564,7 +575,7 @@ export async function searchCity(query, number = 5) {
  * @returns 实时天气对象
  */
 export async function getNowWeather(locationId) {
-  const cacheKey = `weather:now:${locationId}`;
+  const cacheKey = `${apiLang()}:weather:now:${locationId}`;
   const cacheTTL = CACHE_TTL.realtime || 30 * 60 * 1000;
   
   const url = buildUrl(WEATHER_API_BASE, '/weather/now', {
@@ -588,31 +599,33 @@ export async function getNowWeather(locationId) {
 }
 
 /**
- * 获取 3 天预报
+ * 获取逐日预报（3 天或 7 天）
  * @param locationId - 城市 ID
- * @returns 3 天预报数组
+ * @param days - 预报天数（7 及以上走 7d 端点，否则 3d）
+ * @returns 逐日预报数组
  */
-export async function getDailyForecast(locationId) {
-  const cacheKey = `weather:daily:${locationId}:3d`;
+export async function getDailyForecast(locationId, days = 3) {
+  const use7d = days >= 7;
+  const cacheKey = `${apiLang()}:weather:daily:${locationId}:${use7d ? '7d' : '3d'}`;
   const cacheTTL = CACHE_TTL.daily || 60 * 60 * 1000;
-  
-  const url = buildUrl(WEATHER_API_BASE, '/weather/3d', {
+
+  const url = buildUrl(WEATHER_API_BASE, use7d ? '/weather/7d' : '/weather/3d', {
     location: locationId,
   });
-  
+
   try {
     const data = await fetchWithCache(
       url,
       cacheKey,
       cacheTTL,
       true, // 使用 Mock 回退
-      generateMockDailyForecast
+      generateMockDailyForecast.bind(null, use7d ? 7 : 3)
     );
-    
+
     return normalizeDailyForecast(data);
   } catch (error) {
     console.error('[qweather] getDailyForecast 失败:', error);
-    return generateMockDailyForecast();
+    return generateMockDailyForecast(use7d ? 7 : 3);
   }
 }
 
@@ -622,7 +635,7 @@ export async function getDailyForecast(locationId) {
  * @returns 24 小时预报数组
  */
 export async function getHourlyForecast(locationId) {
-  const cacheKey = `weather:hourly:${locationId}:24h`;
+  const cacheKey = `${apiLang()}:weather:hourly:${locationId}:24h`;
   const cacheTTL = CACHE_TTL.hourly || 30 * 60 * 1000;
 
   const url = buildUrl(WEATHER_API_BASE, '/weather/24h', {

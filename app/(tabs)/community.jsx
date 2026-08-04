@@ -4,9 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Accent, TextColor, Spacing, Radius, FontSize, FontWeight, Brand, goldAlpha, whiteAlpha } from '../../styles/designTokens';
+import { useI18n } from '../../services/i18n';
 
 export default function CommunityScreen() {
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -18,11 +20,11 @@ export default function CommunityScreen() {
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>社区即将上线</Text>
+          <Text style={styles.title}>{t('community.comingSoon')}</Text>
 
           {/* Subtitle */}
           <Text style={styles.subtitle}>
-            我们正在打造摄影天气社区，敬请期待
+            {t('community.subtitle')}
           </Text>
 
           {/* BackHomeHint Button */}
@@ -32,7 +34,7 @@ export default function CommunityScreen() {
             activeOpacity={0.7}
           >
             <Ionicons name="home-outline" size={18} color={Brand.Gold} />
-            <Text style={styles.backButtonText}>返回首页</Text>
+            <Text style={styles.backButtonText}>{t('community.backHome')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
