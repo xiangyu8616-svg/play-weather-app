@@ -21,6 +21,8 @@ import {
 } from '../../services/astronomyService';
 import { calculateGlowForecast } from '../../services/phenomenon/glow';
 import { calculateRainbowProbability, calculateHaloProbability } from '../../services/phenomenon/halo';
+import { computeShootingWindow } from '../../services/phenomenon/shootingWindow';
+import { scheduleWindowReminder, getScheduledWindowReminder } from '../../services/reminderService';
 import {
   Bg, Accent, TextColor, Spacing, Radius,
   FontSize, FontWeight, auroraAlpha, whiteAlpha,
@@ -59,6 +61,15 @@ function formatCountdown(ms) {
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
 }
+
+// 拍摄窗口质量等级 → 徽章颜色
+const SHOOT_QUALITY_COLORS = {
+  epic: '#FF6B35',
+  excellent: Accent.star,
+  good: Accent.aurora,
+  fair: TextColor.secondary,
+  poor: TextColor.muted,
+};
 
 function getUVLevel(index) {
   const i = parseInt(index) || 0;
@@ -119,6 +130,9 @@ export default function HomeScreen() {
   const [astronomyData, setAstronomyData] = useState(null);
   const [goldenCountdown, setGoldenCountdown] = useState('--');
   const [kpData, setKpData] = useState(null);
+  const [photoTimes, setPhotoTimes] = useState(null);
+  // 提醒状态：null=未设置 | { fireDate }=已设置 | 'failed'=失败
+  const [reminder, setReminder] = useState(null);
 
   const cityCoords = useRef({ lat: 39.9042, lng: 116.4074 });
 
@@ -173,6 +187,52 @@ export default function HomeScreen() {
     } catch { return null; }
   }, [nowWeather]);
 
+  // ── 今日拍摄窗口（ROADMAP 1.8 差异化核心）──
+  const shootWindow = useMemo(() => {
+    if (!photoTimes || !glowForecast) return null;
+    try {
+      return computeShootingWindow({
+        now: new Date(),
+        photoTimes,
+        glowForecast,
+        visKm: parseInt(nowWeather?.vis) || null,
+      });
+    } catch { return null; }
+  }, [photoTimes, glowForecast, nowWeather]);
+
+  // 启动时恢复已设置的提醒状态
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const fireDate = await getScheduledWindowReminder();
+      if (!cancelled && fireDate && fireDate.getTime() > Date.now()) {
+        setReminder({ fireDate });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleShootRemind = async () => {
+    if (!shootWindow || reminder) return;
+    const res = await scheduleWindowReminder({
+      windowStart: shootWindow.windowStart,
+      title: t('shoot.notifTitle'),
+      body: t('shoot.notifBody', {
+        start: formatTime(shootWindow.windowStart),
+        p: shootWindow.probability,
+      }),
+    });
+    setReminder(res.ok ? { fireDate: res.fireDate } : 'failed');
+  };
+
+  const shootSentenceKey = !shootWindow
+    ? null
+    : shootWindow.type === 'sunsetGlow'
+      ? 'shoot.sentenceSunsetToday'
+      : shootWindow.day === 'tomorrow'
+        ? 'shoot.sentenceSunriseTomorrow'
+        : 'shoot.sentenceSunriseToday';
+
   // ── 紫外线 ──
   const uvIndex = useMemo(() => {
     const dayUV = dailyForecast?.[0]?.uvIndex;
@@ -218,6 +278,7 @@ export default function HomeScreen() {
     try {
       const { lat, lng } = cityCoords.current;
       const photoTimes = getPhotographyTimes(new Date(), lat, lng);
+      setPhotoTimes(photoTimes);
       const fmt = (d) => formatTime(d);
       setAstronomyData({
         goldenHour: { start: fmt(photoTimes.goldenHourEvening.start), end: fmt(photoTimes.goldenHourEvening.end), startDate: photoTimes.goldenHourEvening.start },
@@ -226,6 +287,7 @@ export default function HomeScreen() {
         blueHourMorning: { start: fmt(photoTimes.blueHourMorning.start), end: fmt(photoTimes.blueHourMorning.end) },
       });
     } catch {
+      setPhotoTimes(null);
       setAstronomyData({
         goldenHour: { start: '17:30', end: '18:30', startDate: null },
         goldenHourMorning: { start: '05:30', end: '06:30' },
@@ -404,6 +466,60 @@ export default function HomeScreen() {
               </View>
             </View>
           </View>
+
+          {/* ═══════════════════════════════════════════
+              2.5 今日拍摄窗口（差异化核心，ROADMAP 1.8）
+          ═══════════════════════════════════════════ */}
+          {shootWindow && shootSentenceKey && (
+            <View style={styles.shootCard}>
+              <View style={styles.shootHeader}>
+                <View style={styles.shootTitleRow}>
+                  <Ionicons name="camera" size={16} color={Accent.star} />
+                  <Text style={styles.shootTitle}>{t('shoot.title')}</Text>
+                </View>
+                <View style={[styles.shootQualityBadge, { backgroundColor: `${SHOOT_QUALITY_COLORS[shootWindow.quality]}26` }]}>
+                  <Text style={[styles.shootQualityText, { color: SHOOT_QUALITY_COLORS[shootWindow.quality] }]}>
+                    {t(`shoot.quality.${shootWindow.quality}`)}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.shootSentence}>
+                {t(shootSentenceKey, {
+                  start: formatTime(shootWindow.windowStart),
+                  end: formatTime(shootWindow.windowEnd),
+                  p: shootWindow.probability,
+                  vis: shootWindow.visKm ?? '--',
+                })}
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.shootRemindBtn,
+                  reminder === 'failed' && styles.shootRemindBtnFailed,
+                  reminder && reminder !== 'failed' && styles.shootRemindBtnDone,
+                ]}
+                onPress={handleShootRemind}
+                disabled={!!reminder && reminder !== 'failed'}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={reminder === 'failed' ? 'alert-circle-outline' : reminder ? 'checkmark-circle' : 'notifications-outline'}
+                  size={15}
+                  color={reminder === 'failed' ? Accent.danger : reminder ? Accent.aurora : '#1A1206'}
+                />
+                <Text style={[
+                  styles.shootRemindText,
+                  reminder === 'failed' && { color: Accent.danger },
+                  reminder && reminder !== 'failed' && { color: Accent.aurora },
+                ]}>
+                  {reminder === 'failed'
+                    ? t('shoot.remindFailed')
+                    : reminder
+                      ? t('shoot.reminded', { time: formatTime(reminder.fireDate) })
+                      : t('shoot.remind')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* ═══════════════════════════════════════════
               3. 天气概览行
@@ -746,6 +862,63 @@ const styles = StyleSheet.create({
     ...CardStyle,
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.md,
+  },
+
+  // ── 今日拍摄窗口 ──
+  shootCard: {
+    ...CardStyle,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.22)',
+  },
+  shootHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  shootTitleRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+  },
+  shootTitle: {
+    fontSize: FontSize.h3,
+    fontWeight: FontWeight.semiBold,
+    color: TextColor.primary,
+    letterSpacing: 0.3,
+  },
+  shootQualityBadge: {
+    paddingHorizontal: 10, paddingVertical: 3,
+    borderRadius: Radius.full,
+  },
+  shootQualityText: {
+    fontSize: FontSize.micro,
+    fontWeight: FontWeight.semiBold,
+  },
+  shootSentence: {
+    fontSize: FontSize.body,
+    color: TextColor.primary,
+    lineHeight: 22,
+    marginBottom: Spacing.md,
+  },
+  shootRemindBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: Accent.star,
+    borderRadius: Radius.md,
+    paddingVertical: 11,
+  },
+  shootRemindBtnDone: {
+    backgroundColor: 'rgba(100, 255, 218, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(100, 255, 218, 0.25)',
+  },
+  shootRemindBtnFailed: {
+    backgroundColor: 'rgba(255, 68, 68, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 68, 68, 0.25)',
+  },
+  shootRemindText: {
+    fontSize: FontSize.caption,
+    fontWeight: FontWeight.semiBold,
+    color: '#1A1206',
   },
   hourlyRow: {
     gap: Spacing.md,

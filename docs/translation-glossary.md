@@ -176,3 +176,17 @@
 | 页面硬编码 | forecast 页城市名「北京」、AQI/UV catch 回退文案 | `app/(tabs)/forecast.jsx` |
 
 处理原则：数据层文本在 service 输出时按 `useI18n.getState().lang` 映射（参照 qweatherService 的 `apiLang()` 模式），不在 UI 层硬翻。
+
+---
+
+## 九、拍摄窗口功能术语（2026-08-04 第三轮，shoot 命名空间）
+
+| 中文 | 英文（本项目标准） | 备注 |
+|------|-------------------|------|
+| 今日拍摄窗口 | Today's Photo Window | 差异化功能名；用 Photo Window 而非直译 Shooting Window，更贴近摄影圈说法 |
+| 朝霞 / 晚霞 | sunrise glow / sunset glow | 行内 Sentence case |
+| 一键提醒 | Remind Me | Apple 日历惯例 |
+| 已设提醒 | Reminder set · {time} | |
+| 史诗级 / 优秀 / 良好 / 一般 / 较差 | Epic / Excellent / Good / Fair / Poor | 质量等级，Title Case；Epic 呼应霞光预测圈（如 SunsetWx）用法 |
+| 建议朝西 / 朝东 | face west / face east | 小写，句末 |
+| 拍摄窗口即将开始 | Shooting window starting soon | 通知标题（通知正文里窗口用 shooting window，卡片标题用 Photo Window：标题求简，通知求明确） |

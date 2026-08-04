@@ -44,7 +44,7 @@
 | 1.5 | 小时级预报 | ✅ 2026-08-03 完成：`getHourlyForecast`（/weather/24h，缓存 TTL 30min）+ 首页逐小时横向滚动卡片（时刻/图标/温度/降水概率）；概览行图标按天气文本映射 |
 | 1.6 | 极光真实数据 | ✅ 2026-08-04 完成：`services/aurora/noaaService.js` 接入 NOAA SWPC Kp 预报（免费无 Key、CORS 开放、缓存 60min）；首页 hero 卡 KP 写死 → 今晚 KP 峰值 + 按纬度估算的本地 KP 门槛；概率 = 天气分×50% + Kp 达标度×45% |
 | 1.7 | 后端加固 | 限流换 Upstash Redis、验证码防刷、JWT secret 换 64 字节随机串 |
-| 1.8 | "今日拍摄窗口"卡片 | 黄金时刻+天气条件合成一句话结论（差异化核心，见下） |
+| 1.8 | "今日拍摄窗口"卡片 | ✅ 2026-08-04 完成：`services/phenomenon/shootingWindow.js` 纯函数（朝霞/晚霞窗口选取：未结束窗口取概率高者、平手取晚霞、今日全过转明早 +24h；质量等级映射 epic/excellent/good/fair/poor）+ `services/reminderService.js`（expo-notifications 本地提醒，提前 30min，单条去重，Web/未授权优雅降级）+ 首页 hero 卡下方金色描边卡片（一句话结论+质量徽章+一键提醒）；单测 7/7 通过（`scripts/test-shooting-window.mjs`）；待实测通知在真机的到达率 |
 
 **差异化功能 —— 今日拍摄窗口**：首页顶部卡片，把天文时刻+天气预测合成为可执行结论：
 > "今晚 19:42–20:15 有 72% 概率出现晚霞，能见度 24km，建议朝西。"
