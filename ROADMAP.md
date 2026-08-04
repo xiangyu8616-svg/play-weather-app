@@ -42,7 +42,7 @@
 | 1.3 | 登录系统 | ✅ 邮箱 OTP 已上线（2026-07-30）：`stores/userStore.js` + `EmailLoginCard`，Supabase Auth 替代 `api/auth/`（已删）；Zustand `userStore` 含会话恢复/资料/收藏数；待实测收邮件 + 昵称编辑 |
 | 1.4 | 收藏地点 | ✅ 2026-08-03 上线：`stores/savedLocationsStore.js`（AsyncStorage 快照，离线/未登录可用）+ Supabase `saved_locations` 双向合并（乐观更新+失败回滚）；city-list 星标 toggle +「我的收藏」分组；首页默认城市接入；待实测云端同步 |
 | 1.5 | 小时级预报 | ✅ 2026-08-03 完成：`getHourlyForecast`（/weather/24h，缓存 TTL 30min）+ 首页逐小时横向滚动卡片（时刻/图标/温度/降水概率）；概览行图标按天气文本映射 |
-| 1.6 | 极光真实数据 | 接入 NOAA Kp 指数（`NOAA_CONFIG` 已配好） |
+| 1.6 | 极光真实数据 | ✅ 2026-08-04 完成：`services/aurora/noaaService.js` 接入 NOAA SWPC Kp 预报（免费无 Key、CORS 开放、缓存 60min）；首页 hero 卡 KP 写死 → 今晚 KP 峰值 + 按纬度估算的本地 KP 门槛；概率 = 天气分×50% + Kp 达标度×45% |
 | 1.7 | 后端加固 | 限流换 Upstash Redis、验证码防刷、JWT secret 换 64 字节随机串 |
 | 1.8 | "今日拍摄窗口"卡片 | 黄金时刻+天气条件合成一句话结论（差异化核心，见下） |
 
@@ -54,7 +54,7 @@
 
 | # | 任务 | 说明 |
 |---|------|------|
-| 2.1 | 英文版（i18n） | 目标欧美，英文是底线；德/法/西后补 |
+| 2.1 | 英文版（i18n） | 🔶 框架提前落地（2026-08-04）：`services/i18n/`（zh/en 语言包 + zustand store + `{param}` 插值 + AsyncStorage 持久化），默认中文，「我的 → 设置 → 语言」点击切换；已接入：profile 全量、首页、城市搜索、Tab 导航；待迁移：预报/社区页、登录卡片、组件库文本 |
 | 2.2 | 设计一致性审计 | 四个Tab截图并排，统一圆角/间距/字体层级；暗色优先 |
 | 2.3 | 空状态与错误态 | 定位被拒、API配额耗尽、无网络、收藏为空 |
 | 2.4 | 合规文档 | 隐私政策（公开URL）、账号删除入口、GDPR Data Safety 表单、举报入口、W-8BEN |

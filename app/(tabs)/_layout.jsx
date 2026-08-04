@@ -4,6 +4,7 @@ import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EarthIcon, PartlySunnyIcon, CameraIcon, PersonIcon } from '../../components/icons/TabIcons';
 import { Accent, TextColor, auroraAlpha } from '../../styles/designTokens';
+import { useI18n } from '../../services/i18n';
 
 /**
  * 底部导航布局 — v2.1 Aurora 极光主题
@@ -12,6 +13,7 @@ import { Accent, TextColor, auroraAlpha } from '../../styles/designTokens';
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const isIOS = Platform.OS === 'ios';
+  const { t } = useI18n();
 
   return (
     <Tabs
@@ -92,25 +94,25 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: '观测',
+          title: t('tabs.home'),
         }}
       />
       <Tabs.Screen
         name="forecast"
         options={{
-          title: '预报',
+          title: t('tabs.forecast'),
         }}
       />
       <Tabs.Screen
         name="community"
         options={{
-          title: '社区',
+          title: t('tabs.community'),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: '我的',
+          title: t('tabs.profile'),
         }}
       />
     </Tabs>

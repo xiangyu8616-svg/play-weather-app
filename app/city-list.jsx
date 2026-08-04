@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import qweatherService from '../services/weather/qweatherService';
 import { useSavedLocationsStore } from '../stores/savedLocationsStore';
+import { useI18n } from '../services/i18n';
 import {
   Bg, Accent, TextColor, Spacing, Radius,
   FontSize, FontWeight, auroraAlpha, whiteAlpha,
@@ -51,6 +52,7 @@ export default function CityListScreen() {
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const { locations: savedLocations, init: initSaved, toggle: toggleSaved } = useSavedLocationsStore();
+  const { t } = useI18n();
 
   // 初始化收藏 store（本地快照 + 登录后云端合并）
   useEffect(() => { initSaved(); }, []);
@@ -135,7 +137,7 @@ export default function CityListScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={22} color={TextColor.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>选择城市</Text>
+          <Text style={styles.headerTitle}>{t('cityList.title')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -145,7 +147,7 @@ export default function CityListScreen() {
             <Ionicons name="search" size={18} color={TextColor.muted} />
             <TextInput
               style={styles.searchInput}
-              placeholder="搜索城市..."
+              placeholder={t('cityList.searchPlaceholder')}
               placeholderTextColor={TextColor.muted}
               value={query}
               onChangeText={setQuery}
@@ -178,15 +180,15 @@ export default function CityListScreen() {
           ) : (
             <View style={styles.emptyWrap}>
               <Ionicons name="search-outline" size={48} color={TextColor.muted} />
-              <Text style={styles.emptyText}>未找到城市</Text>
+              <Text style={styles.emptyText}>{t('cityList.notFound')}</Text>
             </View>
           )
         ) : (
           <FlatList
             data={[
-              ...(savedLocations.length > 0 ? [{ title: '我的收藏', data: savedLocations }] : []),
-              { title: '极光观测热门', data: AURORA_CITIES },
-              { title: '热门城市', data: HOT_CITIES },
+              ...(savedLocations.length > 0 ? [{ title: t('cityList.mySaved'), data: savedLocations }] : []),
+              { title: t('cityList.auroraHot'), data: AURORA_CITIES },
+              { title: t('cityList.hotCities'), data: HOT_CITIES },
             ]}
             keyExtractor={(item) => item.title}
             renderItem={({ item }) => (

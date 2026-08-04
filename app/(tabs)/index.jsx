@@ -13,6 +13,7 @@ import GlobeView from '../../components/globe/GlobeView';
 import qweatherService from '../../services/weather/qweatherService';
 import noaaService from '../../services/aurora/noaaService';
 import { useSavedLocationsStore } from '../../stores/savedLocationsStore';
+import { useI18n } from '../../services/i18n';
 import {
   getPhotographyTimes, formatTime, getMoonPhase,
   getMilkyWayVisibility, getConstellationPosition, getSunPosition,
@@ -50,7 +51,7 @@ function getScoreLabel(score) {
 }
 
 function formatCountdown(ms) {
-  if (ms <= 0) return '进行中';
+  if (ms <= 0) return null; // 由调用处用 t('home.inProgress') 显示
   const totalMin = Math.round(ms / 60000);
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
@@ -94,6 +95,7 @@ function generateMockAqi() {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t, lang } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
@@ -246,13 +248,13 @@ export default function HomeScreen() {
       if (!astronomyData?.goldenHour?.startDate) { setGoldenCountdown('--'); return; }
       try {
         const ms = astronomyData.goldenHour.startDate.getTime() - Date.now();
-        setGoldenCountdown(formatCountdown(ms));
+        setGoldenCountdown(formatCountdown(ms) ?? t('home.inProgress'));
       } catch { setGoldenCountdown('--'); }
     };
     tick();
     const interval = setInterval(tick, 60000);
     return () => clearInterval(interval);
-  }, [astronomyData]);
+  }, [astronomyData, t]);
 
   // 首次加载：初始化收藏 store，有收藏时以默认收藏城市作为初始城市
   useEffect(() => {
@@ -349,7 +351,7 @@ export default function HomeScreen() {
             <TextInput
               ref={searchInputRef}
               style={styles.hiddenSearchInput}
-              placeholder="搜索城市"
+              placeholder={t('cityList.searchPlaceholder')}
               placeholderTextColor="rgba(255,255,255,0.35)"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -366,18 +368,18 @@ export default function HomeScreen() {
           <View style={styles.heroCard}>
             <View style={styles.heroHeader}>
               <Ionicons name={auroraVisible ? "checkmark-circle" : "close-circle"} size={20} color={auroraVisible ? Accent.success : Accent.danger} />
-              <Text style={styles.heroTitle}>今晚能看到极光吗？</Text>
+              <Text style={styles.heroTitle}>{t('home.heroTitle')}</Text>
             </View>
 
             <View style={styles.heroMain}>
               <Text style={[styles.heroStatus, { color: auroraVisible ? Accent.aurora : TextColor.muted }]}>
-                {auroraVisible ? '可见' : '不可见'}
+                {auroraVisible ? t('home.visible') : t('home.notVisible')}
               </Text>
               <View style={styles.heroSubRow}>
                 <Text style={styles.heroSubText}>
                   {tonightKp != null
-                    ? `今晚 KP 峰值 ${tonightKp} · 本地需 KP≥${requiredKp}`
-                    : `KP ${requiredKp} → ${auroraVisible ? '可见' : '需更高指数'}`}
+                    ? t('home.kpSubtitleLive', { kp: tonightKp, required: requiredKp })
+                    : t('home.kpSubtitleFallback', { required: requiredKp, status: auroraVisible ? t('home.visible') : t('home.kpNeedHigher') })}
                 </Text>
               </View>
             </View>
@@ -389,24 +391,24 @@ export default function HomeScreen() {
                 backgroundColor: auroraVisible ? Accent.aurora : TextColor.muted,
               }]} />
             </View>
-            <Text style={styles.probLabel}>极光概率 {auroraProbability}%</Text>
+            <Text style={styles.probLabel}>{t('home.probability', { p: auroraProbability })}</Text>
 
             {/* 关键指标 */}
             <View style={styles.heroMetrics}>
               <View style={styles.metricItem}>
                 <Ionicons name="cloud-outline" size={16} color={TextColor.secondary} />
                 <Text style={styles.metricValue}>{cloudCover}%</Text>
-                <Text style={styles.metricLabel}>云量</Text>
+                <Text style={styles.metricLabel}>{t('home.metricCloud')}</Text>
               </View>
               <View style={styles.metricItem}>
                 <Ionicons name="eye-outline" size={16} color={TextColor.secondary} />
                 <Text style={styles.metricValue}>{visibility}km</Text>
-                <Text style={styles.metricLabel}>能见度</Text>
+                <Text style={styles.metricLabel}>{t('home.metricVis')}</Text>
               </View>
               <View style={styles.metricItem}>
                 <Ionicons name="camera-outline" size={16} color={TextColor.secondary} />
                 <Text style={styles.metricValue}>{score}</Text>
-                <Text style={styles.metricLabel}>评分</Text>
+                <Text style={styles.metricLabel}>{t('home.metricScore')}</Text>
               </View>
             </View>
           </View>
@@ -424,7 +426,7 @@ export default function HomeScreen() {
             </View>
             <View style={styles.weatherHiLo}>
               <Text style={styles.weatherHiLoText}>H:{todayHigh}°  L:{todayLow}°</Text>
-              <Text style={styles.weatherFeels}>体感 {Math.round(parseInt(nowWeather?.feelsLike) || temp)}°</Text>
+              <Text style={styles.weatherFeels}>{t('home.feelsLike', { t: Math.round(parseInt(nowWeather?.feelsLike) || temp) })}</Text>
             </View>
           </View>
 
@@ -432,7 +434,7 @@ export default function HomeScreen() {
               3.5 逐小时预报（横向滚动）
           ═══════════════════════════════════════════ */}
           <View style={styles.hourlyCard}>
-            <Text style={styles.sectionTitle}>逐小时预报</Text>
+            <Text style={styles.sectionTitle}>{t('home.hourlyTitle')}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -474,7 +476,7 @@ export default function HomeScreen() {
               </Text>
               <View style={styles.countdownRow}>
                 <Ionicons name="moon-outline" size={12} color="#60A5FA" />
-                <Text style={[styles.countdownText, { color: '#60A5FA' }]}>日落后</Text>
+                <Text style={[styles.countdownText, { color: '#60A5FA' }]}>{t('home.afterSunset')}</Text>
               </View>
             </View>
           </View>
@@ -484,10 +486,10 @@ export default function HomeScreen() {
           ═══════════════════════════════════════════ */}
           <View style={styles.quickMetricsCard}>
             <View style={styles.quickMetricsRow}>
-              <QuickMetric icon="water-outline" label="湿度" value={`${nowWeather?.humidity || '--'}%`} />
-              <QuickMetric icon="speedometer-outline" label="风速" value={`${nowWeather?.windScale || '--'}级`} />
-              <QuickMetric icon="eye-outline" label="能见度" value={`${visibility}km`} />
-              <QuickMetric icon="sunny-outline" label="紫外线" value={`UV ${uvIndex}`} color={uv.color} />
+              <QuickMetric icon="water-outline" label={t('home.humidity')} value={`${nowWeather?.humidity || '--'}%`} />
+              <QuickMetric icon="speedometer-outline" label={t('home.wind')} value={`${nowWeather?.windScale || '--'}${lang === 'zh' ? '级' : ''}`} />
+              <QuickMetric icon="eye-outline" label={t('home.visibility')} value={`${visibility}km`} />
+              <QuickMetric icon="sunny-outline" label={t('home.uv')} value={`UV ${uvIndex}`} color={uv.color} />
             </View>
           </View>
 
@@ -502,7 +504,7 @@ export default function HomeScreen() {
               <View style={styles.astroInfo}>
                 <Text style={styles.astroName}>{moonPhase?.phaseName || '--'}</Text>
                 <Text style={styles.astroMeta}>
-                  照度 {moonPhase?.illumination != null ? `${Math.round(moonPhase.illumination)}%` : '--'}
+                  {moonPhase?.illumination != null ? t('home.moonIllumination', { v: Math.round(moonPhase.illumination) }) : '--'}
                 </Text>
               </View>
               <View style={styles.astroProgressBg}>
@@ -516,15 +518,15 @@ export default function HomeScreen() {
               </View>
               <View style={styles.astroInfo}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={styles.astroName}>银河</Text>
+                  <Text style={styles.astroName}>{t('home.milkyWay')}</Text>
                   <View style={[styles.badge, { backgroundColor: milkyWay?.visible ? auroraAlpha(0.15) : 'rgba(255,68,68,0.15)' }]}>
                     <Text style={[styles.badgeText, { color: milkyWay?.visible ? Accent.aurora : Accent.danger }]}>
-                      {milkyWay?.visible ? '可见' : '不可见'}
+                      {milkyWay?.visible ? t('home.visible') : t('home.notVisible')}
                     </Text>
                   </View>
                 </View>
                 <Text style={styles.astroMeta}>
-                  {milkyWay?.visible ? `观测质量 ${milkyWay.quality}` : milkyWay?.seasonFactor || '非观测季'}
+                  {milkyWay?.visible ? t('home.mwQuality', { q: milkyWay.quality }) : milkyWay?.seasonFactor || t('home.mwOffSeason')}
                 </Text>
               </View>
             </View>
@@ -534,25 +536,25 @@ export default function HomeScreen() {
               7. 大气光学现象
           ═══════════════════════════════════════════ */}
           <View style={styles.phenomenonCard}>
-            <Text style={styles.sectionTitle}>大气光学现象</Text>
+            <Text style={styles.sectionTitle}>{t('home.opticsTitle')}</Text>
             <PhenomenonRow
               icon="rainy-outline"
-              name="彩虹概率"
+              name={t('home.rainbow')}
               probability={0}
-              meta="今日彩虹概率较低"
+              meta={t('home.rainbowLow')}
             />
             <PhenomenonRow
               icon="sunny-outline"
-              name="日晕概率"
+              name={t('home.halo')}
               probability={0}
-              meta="今日晕现象概率较低"
+              meta={t('home.haloLow')}
             />
             {glowForecast && (
               <PhenomenonRow
                 icon="partly-sunny-outline"
-                name="霞光概率"
+                name={t('home.glow')}
                 probability={Math.max(glowForecast.sunriseGlow.probability, glowForecast.sunsetGlow.probability)}
-                meta={`朝霞 ${glowForecast.sunriseGlow.probability}% · 晚霞 ${glowForecast.sunsetGlow.probability}%`}
+                meta={t('home.glowMeta', { sunrise: glowForecast.sunriseGlow.probability, sunset: glowForecast.sunsetGlow.probability })}
               />
             )}
           </View>
@@ -561,7 +563,7 @@ export default function HomeScreen() {
               8. 地球仪（缩小版）
           ═══════════════════════════════════════════ */}
           <View style={styles.globeSection}>
-            <Text style={styles.sectionTitle}>全球视角</Text>
+            <Text style={styles.sectionTitle}>{t('home.globeTitle')}</Text>
             <View style={[styles.globeWrapper, { height: Math.min(screenHeight * 0.28, 280) }]}>
               <View style={styles.globeInner}>
                 <GlobeView selectedDay={1} selectedPhenomenon="all" performanceMode="balanced" />
@@ -590,9 +592,10 @@ function QuickMetric({ icon, label, value, color = TextColor.primary }) {
 }
 
 function HourlyItem({ item, isNow }) {
+  const { t } = useI18n();
   const d = item.fxTime ? new Date(item.fxTime) : null;
   const hour = d && !isNaN(d) ? d.getHours() : null;
-  const hourLabel = isNow ? '现在' : hour != null ? `${hour}时` : '--';
+  const hourLabel = isNow ? t('home.now') : hour != null ? t('home.hour', { h: hour }) : '--';
   const isNight = hour != null && (hour < 6 || hour >= 19);
   const pop = parseInt(item.pop) || 0;
   return (

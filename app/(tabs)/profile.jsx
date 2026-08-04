@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Accent, Bg, TextColor, Spacing, Radius, FontSize, FontWeight, Surface, Brand, goldAlpha, auroraAlpha, whiteAlpha } from '../../styles/designTokens';
 import { loadSettings, saveSettings } from '../../services/settingsService';
 import { useUserStore } from '../../stores/userStore';
+import { useI18n, LANGUAGES } from '../../services/i18n';
 import EmailLoginCard from '../../components/auth/EmailLoginCard';
 import SocialLoginButtons from '../../components/auth/SocialLoginButtons';
 
@@ -18,8 +19,12 @@ export default function ProfileScreen() {
   // 用户登录态（Supabase Auth）
   const { user, profile, savedLocationCount, init, signOut, signInWithApple, signInWithGoogle } = useUserStore();
 
+  // 多语言
+  const { t, lang, setLang, init: initI18n } = useI18n();
+
   useEffect(() => {
     init();
+    initI18n();
   }, []);
 
   // 启动时加载设置
@@ -56,35 +61,43 @@ export default function ProfileScreen() {
     saveSettings({ dailyForecast: value });
   };
 
+  // 语言切换（中文 ⇄ English）
+  const currentLang = LANGUAGES.find((l) => l.code === lang) || LANGUAGES[0];
+  const handleToggleLanguage = () => {
+    const next = lang === 'zh' ? 'en' : 'zh';
+    setLang(next);
+  };
+
   const currentCity = { name: '北京' };
 
   const settingItems = [
     {
       icon: 'thermometer-outline',
-      label: '温度单位',
-      desc: `当前：${tempUnit === '°C' ? '摄氏度' : '华氏度'}`,
+      label: t('profile.tempUnit'),
+      desc: t('profile.tempUnitCurrent', { unit: tempUnit === '°C' ? t('profile.tempUnitC') : t('profile.tempUnitF') }),
       action: handleToggleTempUnit,
       badge: tempUnit,
     },
     {
       icon: 'language-outline',
-      label: '语言',
-      desc: '简体中文',
-      badge: '中文',
+      label: t('profile.language'),
+      desc: currentLang.label,
+      badge: currentLang.short,
+      action: handleToggleLanguage,
     },
   ];
 
   const toggleItems = [
-    { icon: 'notifications-outline', label: '通知推送', desc: '接收重要天气预警和概率提醒', value: notificationsEnabled, set: handleToggleNotification },
-    { icon: 'alert-circle-outline', label: '高概率预警', desc: '收藏地点概率>70% 时推送', value: probabilityAlert, set: handleToggleProbability },
-    { icon: 'sunny-outline', label: '每日预报', desc: '每天早上 8 点推送今日预报', value: dailyForecast, set: handleToggleDailyForecast },
+    { icon: 'notifications-outline', label: t('profile.notifPush'), desc: t('profile.notifPushDesc'), value: notificationsEnabled, set: handleToggleNotification },
+    { icon: 'alert-circle-outline', label: t('profile.notifAlert'), desc: t('profile.notifAlertDesc'), value: probabilityAlert, set: handleToggleProbability },
+    { icon: 'sunny-outline', label: t('profile.notifDaily'), desc: t('profile.notifDailyDesc'), value: dailyForecast, set: handleToggleDailyForecast },
   ];
 
   const aboutItems = [
-    { icon: 'help-circle-outline', label: '帮助与反馈', color: '#FFD60A' },
-    { icon: 'shield-checkmark-outline', label: '隐私政策', color: '#5B6CF9' },
-    { icon: 'code-slash-outline', label: '开源许可', color: '#30D158' },
-    { icon: 'information-circle-outline', label: '版本号', sub: 'v1.0.0', color: 'rgba(255,255,255,0.4)' },
+    { icon: 'help-circle-outline', label: t('profile.help'), color: '#FFD60A' },
+    { icon: 'shield-checkmark-outline', label: t('profile.privacy'), color: '#5B6CF9' },
+    { icon: 'code-slash-outline', label: t('profile.licenses'), color: '#30D158' },
+    { icon: 'information-circle-outline', label: t('profile.version'), sub: 'v1.0.0', color: 'rgba(255,255,255,0.4)' },
   ];
 
   return (
@@ -97,10 +110,10 @@ export default function ProfileScreen() {
             <Text style={styles.appIcon}>{user ? '👤' : '🌤️'}</Text>
           </View>
           <Text style={styles.appName}>
-            {user ? (profile?.nickname || user.email?.split('@')[0] || '摄影爱好者') : '摄影爱好者'}
+            {user ? (profile?.nickname || user.email?.split('@')[0] || t('profile.appName')) : t('profile.appName')}
           </Text>
           <Text style={styles.appTagline}>
-            {user ? user.email : '预见金山，不负此行'}
+            {user ? user.email : t('profile.tagline')}
           </Text>
         </View>
 
@@ -112,7 +125,7 @@ export default function ProfileScreen() {
                 <>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
                     <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
-                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginHorizontal: 12 }}>或使用</Text>
+                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginHorizontal: 12 }}>{t('profile.orUse')}</Text>
                     <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
                   </View>
                   <SocialLoginButtons
@@ -129,28 +142,28 @@ export default function ProfileScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statsCapsule}>
             <Text style={styles.statsNumber}>—</Text>
-            <Text style={styles.statsLabel}>发帖数</Text>
+            <Text style={styles.statsLabel}>{t('profile.posts')}</Text>
           </View>
           <View style={styles.statsCapsule}>
             <Text style={styles.statsNumber}>—</Text>
-            <Text style={styles.statsLabel}>获赞数</Text>
+            <Text style={styles.statsLabel}>{t('profile.likes')}</Text>
           </View>
           <View style={styles.statsCapsule}>
             <Text style={styles.statsNumber}>{user ? savedLocationCount : '—'}</Text>
-            <Text style={styles.statsLabel}>关注城市</Text>
+            <Text style={styles.statsLabel}>{t('profile.savedCities')}</Text>
           </View>
         </View>
 
         {/* 2. 城市管理 */}
         <View style={styles.glassCard}>
-          <Text style={styles.sectionTitle}>📍 当前城市</Text>
+          <Text style={styles.sectionTitle}>{t('profile.currentCity')}</Text>
           <View style={styles.cityRow}>
             <View style={styles.cityInfo}>
               <Ionicons name="location" size={18} color="#DAA520" />
               <Text style={styles.cityName}>{currentCity.name}</Text>
             </View>
             <TouchableOpacity style={styles.citySwitchBtn}>
-              <Text style={styles.citySwitchText}>切换</Text>
+              <Text style={styles.citySwitchText}>{t('profile.switchCity')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -158,12 +171,12 @@ export default function ProfileScreen() {
         {/* 3. 数据来源 */}
         <View style={[styles.glassCard, styles.dataSource]}>
           <Ionicons name="cloud-done-outline" size={20} color="rgba(255,255,255,0.5)" />
-          <Text style={styles.dataSourceText}>数据来源：和风天气企业版</Text>
+          <Text style={styles.dataSourceText}>{t('profile.dataSource')}</Text>
         </View>
 
         {/* 4. 设置选项 */}
         <View style={styles.glassCard}>
-          <Text style={styles.sectionTitle}>⚙️ 设置</Text>
+          <Text style={styles.sectionTitle}>{t('profile.settings')}</Text>
           {settingItems.map((item, i) => (
             <TouchableOpacity
               key={i}
@@ -188,7 +201,7 @@ export default function ProfileScreen() {
 
         {/* 5. 通知开关 */}
         <View style={styles.glassCard}>
-          <Text style={styles.sectionTitle}>🔔 通知</Text>
+          <Text style={styles.sectionTitle}>{t('profile.notifications')}</Text>
           {toggleItems.map((item, i) => (
             <View
               key={i}
@@ -211,7 +224,7 @@ export default function ProfileScreen() {
 
         {/* 6. 关于 */}
         <View style={styles.glassCard}>
-          <Text style={styles.sectionTitle}>📋 关于</Text>
+          <Text style={styles.sectionTitle}>{t('profile.about')}</Text>
           {aboutItems.map((item, i) => (
             <TouchableOpacity
               key={i}
@@ -235,13 +248,13 @@ export default function ProfileScreen() {
         {user && (
           <TouchableOpacity style={styles.logoutBtn} activeOpacity={0.7} onPress={signOut}>
             <Ionicons name="log-out-outline" size={18} color="#FF375F" />
-            <Text style={styles.logoutText}>退出登录</Text>
+            <Text style={styles.logoutText}>{t('profile.logout')}</Text>
           </TouchableOpacity>
         )}
 
         {/* 8. 底部 */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>玩天气 · 预见金山不负此行</Text>
+          <Text style={styles.footerText}>{t('profile.footer')}</Text>
           <Text style={styles.footerCopy}>© 2026 PlayWeather Team</Text>
         </View>
 
@@ -353,5 +366,3 @@ const styles = StyleSheet.create({
   footerText: { fontSize: FontSize.caption, color: TextColor.muted },
   footerCopy: { fontSize: FontSize.micro, color: TextColor.muted, marginTop: 4 },
 });
-;
-;
