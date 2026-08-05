@@ -58,9 +58,13 @@ Golden hour, sunset glow & aurora forecasts with smart reminders
 |---|------|------|------|
 | 1 | 首页 hero：今晚极光/晚霞卡片 + 拍摄窗口卡 | 主卖点「今晚拍什么」 | ✅ `store-assets/02-home-en.png` |
 | 2 | 逐小时 + 7 天预报页 | 常规天气能力 | ✅ `store-assets/03-forecast-en.png` |
-| 3 | 现象预报（霞光概率/蓝时刻倒计时） | 差异化功能 | 待截 |
-| 4 | 3D 地球仪/台风 | 视觉亮点 | 待截 |
+| 3 | 现象预报（霞光概率/蓝时刻倒计时） | 差异化功能 | ✅ `store-assets/05-phenomenon-en.png`（月相/银河 + 大气光学三卡） |
+| 4 | 3D 地球仪/台风 | 视觉亮点 | ✅ `store-assets/06-globe-en.png`（晨昏线地球全景） |
 | 5 | 「我的」多语言与提醒设置 | 国际化+提醒 | ✅ `store-assets/04-profile-en.png`（未登录态） |
+
+6.5"（1242×2688）整套已补齐，存 `store-assets/6.5inch/`：01-home-en、02-forecast-en、03-phenomenon-en、04-globe-en、05-profile-en。
+
+注意：6.5" 模拟在页面导航后会被重置，需重新下发 CDP 覆盖并立即截图。
 
 尺寸要求：iOS 6.7"（1290×2796）、6.5"（1242×2688）；Android 最小 1080px 宽、建议 1080×2340 起。
 拍摄方式：WebBridge 模拟视口截图（CDP `Emulation.setDeviceMetricsOverride`，deviceScaleFactor=3），存 `store-assets/`。
