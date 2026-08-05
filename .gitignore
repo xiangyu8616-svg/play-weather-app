@@ -47,3 +47,4 @@ config/apiKeys.js
 
 # Local secrets (JWT private keys etc.)
 secrets/
+.tmp/

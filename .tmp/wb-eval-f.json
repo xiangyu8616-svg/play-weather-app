@@ -1,1 +1,0 @@
-{"action":"evaluate","args":{"code":"(() => { const t = document.body.innerText; return JSON.stringify({lang: localStorage.getItem('playweather_language'), len: t.length, text: t.slice(0, 1500)}); })()"},"session":"store-assets"}
