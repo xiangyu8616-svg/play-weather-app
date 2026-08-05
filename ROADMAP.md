@@ -55,10 +55,10 @@
 | # | 任务 | 说明 |
 |---|------|------|
 | 2.1 | 英文版（i18n） | ✅ 2026-08-04 完成：`services/i18n/`（zh/en 语言包 + zustand store + `{param}` 插值 + AsyncStorage 持久化），默认中文，「我的 → 设置 → 语言」点击切换；术语标准 `docs/translation-glossary.md`（主参考 AccuWeather）；已接入：全部页面 + 和风 API lang 跟随（缓存按语言隔离）+ 数据层文本（AQI 按 EPA 命名、UV 按 WHO 命名、月相、星座、风向罗盘缩写、台风 JMA 分级、mock 文本）——i18n 全链路闭环，待用户实测 |
-| 2.2 | 设计一致性审计 | 四个Tab截图并排，统一圆角/间距/字体层级；暗色优先 |
+| 2.2 | 设计一致性审计 | ✅ 2026-08-05 完成：审计报告 `docs/DESIGN_AUDIT.md`（7 项修复 + 1 个潜伏 bug）；新增令牌 `Bg.glass`/`Accent.blueHour`；卡片底/红绿金青色值归一；修复 `TextColor.Primary` 大小写 bug（4 文件 10 处，颜色此前静默回退）；顺带修复**首页生产白屏**（index.jsx 用 FontFamily 未导入，根路由 ReferenceError 整站空白） |
 | 2.3 | 空状态与错误态 | ✅ 2026-08-04 完成（除定位被拒）：首页/预报页红色错误横幅+重试按钮，区分「加载失败（含无网络）」与「API 配额耗尽」（qweatherService 新增 wasQuotaExceeded 标记，402 置位/成功复位）；city-list 收藏为空时显示虚线引导框（原直接隐藏分组）；定位被拒暂不适用——App 采用手动选城市、未申请定位权限 |
-| 2.4 | 合规文档 | 隐私政策（公开URL）、账号删除入口、GDPR Data Safety 表单、举报入口、W-8BEN |
-| 2.5 | 商店素材 | 英文截图（6.7"/6.5"）、描述、关键词（朝霞晚霞预测/云海/黄金时刻/极光） |
+| 2.4 | 合规文档 | ✅ 2026-08-05 完成（除 W-8BEN 需本人填写）：中英双语隐私政策公开页 `https://play-weather-app.vercel.app/privacy-policy.html`（含删除账号/举报联系章节）；profile 关于区接链接 + 删除账号入口（确认弹窗→邮件请求，7 天内处理）；社区页举报/联系入口；`docs/data-safety.md` 商店数据安全表单预填（Play Data Safety + Apple 隐私标签 + GDPR 自查） |
+| 2.5 | 商店素材 | 部分完成 2026-08-05：英文上架文案 `docs/store-listing.md`（App Store 名称/副标题/关键词/描述 + Play 短描述）；英文截图 3 张已截（6.7" 1290×2796：首页 hero+拍摄窗口、预报页光线时间轴+7 天、我的页登录）存 `store-assets/`；待补：现象特写、3D 地球仪、6.5"（1242×2688）尺寸；已知瑕疵：英文首页城市名仍显示中文、英文 7 天列表风向文本待英化、Today/Tomorrow 折行 |
 | 2.6 | EAS Build 双端 profile | iOS TestFlight + Android 封闭测试（Play 新号需约14天封闭测试，提前启动） |
 | 2.7 | 测试补齐 | ✅ 2026-08-05 完成：现象算法（霞光/丁达尔/彩虹/日晕/拍摄窗口 28 用例）、缓存层（读写/TTL/双层/清理/装饰器 13 用例）、API 代理（白名单/参数透传/缓存/限流 15 用例），共 56 用例全过；统一入口 `npm test`（Node 24 原生 TS + ESM loader 重定向 AsyncStorage stub），基建在 `scripts/`（tap 断言库/loader/stub） |
 | 2.8 | 性能 | 地球仪低端机默认 optimized 版 + 帧率检测自动降级 |
