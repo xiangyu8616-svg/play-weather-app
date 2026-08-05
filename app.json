@@ -27,7 +27,13 @@
       }
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Play Weather needs access to your photos so you can share your sky photography with the community."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
