@@ -1,5 +1,6 @@
-// 一次性验证脚本：shootingWindow 纯函数逻辑（验证后可删）
+// shootingWindow 纯函数逻辑测试（tap 版，由 test-all.mjs 统一入口）
 import { computeShootingWindow, qualityKey } from '../services/phenomenon/shootingWindow.js';
+import { section, check } from './helpers/tap.mjs';
 
 const mk = (h, m) => new Date(2026, 7, 4, h, m); // 2026-08-04 本地时间
 const photoTimes = {
@@ -13,8 +14,7 @@ const glow = (riseP, setP) => ({
   sunsetGlow: { probability: setP, quality: setP >= 80 ? '史诗级' : setP >= 60 ? '优秀' : setP >= 40 ? '良好' : setP >= 20 ? '一般' : '较差' },
 });
 
-let pass = 0, fail = 0;
-const check = (name, cond) => { if (cond) { pass++; console.log(`  ✓ ${name}`); } else { fail++; console.log(`  ✗ ${name}`); } };
+section('拍摄窗口 computeShootingWindow / qualityKey');
 
 // 1. 清晨 5:00，两个窗口都未结束，晚霞概率高 → 选晚霞
 let w = computeShootingWindow({ now: mk(5, 0), photoTimes, glowForecast: glow(40, 72), visKm: 24 });
@@ -44,6 +44,3 @@ check('缺 photoTimes 返回 null', computeShootingWindow({ now: mk(12, 0), phot
 check('qualityKey 映射', qualityKey('史诗级') === 'epic' && qualityKey('优秀') === 'excellent'
   && qualityKey('良好') === 'good' && qualityKey('一般') === 'fair' && qualityKey('较差') === 'poor'
   && qualityKey('未知') === 'poor');
-
-console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
-process.exit(fail ? 1 : 0);
