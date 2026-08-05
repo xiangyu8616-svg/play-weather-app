@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Accent, Bg, TextColor, Spacing, Radius, FontSize, FontWeight, Surface, Brand, goldAlpha, auroraAlpha, whiteAlpha } from '../../styles/designTokens';
 import { loadSettings, saveSettings } from '../../services/settingsService';
+import { localizeCityName } from '../../services/weather/cityNames';
 import { useUserStore } from '../../stores/userStore';
 import { useI18n, LANGUAGES } from '../../services/i18n';
 import EmailLoginCard from '../../components/auth/EmailLoginCard';
@@ -180,7 +181,7 @@ export default function ProfileScreen() {
           <View style={styles.cityRow}>
             <View style={styles.cityInfo}>
               <Ionicons name="location" size={18} color="#DAA520" />
-              <Text style={styles.cityName}>{currentCity.name}</Text>
+              <Text style={styles.cityName}>{localizeCityName(currentCity.name, lang)}</Text>
             </View>
             <TouchableOpacity style={styles.citySwitchBtn}>
               <Text style={styles.citySwitchText}>{t('profile.switchCity')}</Text>

@@ -11,6 +11,7 @@ export default {
     profile: '我的',
   },
   home: {
+    defaultCity: '北京',
     heroTitle: '今晚能看到极光吗？',
     visible: '可见',
     notVisible: '不可见',

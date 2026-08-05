@@ -10,6 +10,7 @@ export default {
     profile: 'Profile',
   },
   home: {
+    defaultCity: 'Beijing',
     heroTitle: 'Aurora tonight?',
     visible: 'Visible',
     notVisible: 'Not Visible',

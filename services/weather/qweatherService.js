@@ -71,6 +71,15 @@ function mockText(zh, table = WEATHER_TEXT_EN) {
   return apiLang() === 'en' ? (table[zh] || zh) : zh;
 }
 
+// UI 层防漏：真实 API 按 lang 返回英文，但 zh 缓存/竞态可能漏进中文文本
+// 在英文界面显示前过一遍映射；未命中返回原文
+export function windDirEn(dir) {
+  return (dir && WIND_DIR_EN[dir]) || dir;
+}
+export function weatherTextEn(text) {
+  return (text && WEATHER_TEXT_EN[text]) || text;
+}
+
 // ==================== 类型定义 ====================
 
 /**

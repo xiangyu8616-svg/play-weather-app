@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import qweatherService from '../../services/weather/qweatherService';
+import qweatherService, { windDirEn, weatherTextEn } from '../../services/weather/qweatherService';
 import astronomyService from '../../services/astronomyService';
 import weatherService from '../../services/weather/weatherService';
 import { getWeatherIconName } from '../../services/weather/weatherIcons';
@@ -71,11 +71,11 @@ export default function ForecastScreen() {
   const forecastData = (dailyForecast || []).map((item, index) => ({
     day: formatDay(item.fxDate, index),
     date: formatDate(item.fxDate),
-    condition: item.textDay || t('forecast.defaultCondition'),
+    condition: (lang === 'en' ? weatherTextEn(item.textDay) : item.textDay) || t('forecast.defaultCondition'),
     high: parseInt(item.tempMax) || 0,
     low: parseInt(item.tempMin) || 0,
     rain: Math.min(100, Math.round(parseFloat(item.precip || 0) * 10)),
-    wind: t('forecast.windLevel', { dir: item.windDirDay || '', scale: item.windScaleDay || '' }),
+    wind: t('forecast.windLevel', { dir: lang === 'en' ? windDirEn(item.windDirDay || '') : (item.windDirDay || ''), scale: item.windScaleDay || '' }),
     icon: getWeatherIconName(item.textDay, false, item.iconDay),
   }));
 
@@ -83,6 +83,15 @@ export default function ForecastScreen() {
     loadWeatherData();
     loadAstronomyData();
   }, []);
+
+  // 语言切换/恢复后按新语言重新拉取（前端缓存按语言隔离，命中即瞬时）
+  const prevLangRef = useRef(lang);
+  useEffect(() => {
+    if (prevLangRef.current !== lang) {
+      prevLangRef.current = lang;
+      loadWeatherData();
+    }
+  }, [lang]);
 
   async function loadWeatherData() {
     try {
@@ -181,7 +190,7 @@ export default function ForecastScreen() {
             <Text style={styles.bannerTemp}>{temp}°</Text>
             <View style={styles.bannerCondition}>
               <Ionicons name={getWeatherIconName(nowWeather?.text, false, nowWeather?.icon)} size={20} color={getWeatherIconColor(nowWeather?.text)} />
-              <Text style={styles.bannerConditionText}>{nowWeather?.text || t('forecast.defaultCondition')}</Text>
+              <Text style={styles.bannerConditionText}>{(lang === 'en' ? weatherTextEn(nowWeather?.text) : nowWeather?.text) || t('forecast.defaultCondition')}</Text>
             </View>
           </View>
           <View style={styles.bannerHiLo}>
@@ -232,7 +241,7 @@ export default function ForecastScreen() {
           {forecastData.slice(0, 7).map((day, i) => (
             <View key={i} style={[styles.dayRow, i === 6 && { borderBottomWidth: 0 }]}>
               <View style={styles.dayMain}>
-                <Text style={styles.dayName}>{day.day}</Text>
+                <Text style={styles.dayName} numberOfLines={1}>{day.day}</Text>
                 <Text style={styles.dayDate}>{day.date}</Text>
                 <Ionicons name={day.icon} size={18} color={getWeatherIconColor(day.condition)} style={styles.dayIcon} />
                 {/* 温度条 */}
@@ -269,7 +278,7 @@ export default function ForecastScreen() {
             <EnvItem label="AQI" value={aqiData?.aqi || '--'} sub={aqiData?.category || '--'} color={getAqiColor(aqiData?.aqi)} icon="skull-outline" />
             <EnvItem label="UV" value={uvData?.uvIndex || '--'} sub={uvData?.level || '--'} color={Accent.star} icon="sunny-outline" />
             <EnvItem label={t('forecast.humidity')} value={`${nowWeather?.humidity || '--'}%`} sub={t('forecast.comfort')} color={TextColor.primary} icon="water-outline" />
-            <EnvItem label={t('forecast.wind')} value={t('forecast.windLevel', { dir: '', scale: nowWeather?.windScale || '--' })} sub={nowWeather?.windDir || '--'} color={TextColor.primary} icon="speedometer-outline" />
+            <EnvItem label={t('forecast.wind')} value={t('forecast.windLevel', { dir: '', scale: nowWeather?.windScale || '--' })} sub={(lang === 'en' ? windDirEn(nowWeather?.windDir) : nowWeather?.windDir) || '--'} color={TextColor.primary} icon="speedometer-outline" />
           </View>
         </View>
 
@@ -456,7 +465,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   dayName: {
-    width: 40,
+    width: 68,
     fontSize: FontSize.body,
     color: TextColor.primary,
     fontWeight: FontWeight.medium,

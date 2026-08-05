@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import GlobeView from '../../components/globe/GlobeView';
 import qweatherService from '../../services/weather/qweatherService';
 import noaaService from '../../services/aurora/noaaService';
+import { localizeCityName } from '../../services/weather/cityNames';
 import { useSavedLocationsStore } from '../../stores/savedLocationsStore';
 import { useI18n } from '../../services/i18n';
 import { getWeatherIconName } from '../../services/weather/weatherIcons';
@@ -335,6 +336,15 @@ export default function HomeScreen() {
     return () => { cancelled = true; };
   }, []);
 
+  // 语言切换/恢复后按新语言重新拉取（前端缓存按语言隔离，命中即瞬时）
+  const prevLangRef = useRef(lang);
+  useEffect(() => {
+    if (prevLangRef.current !== lang) {
+      prevLangRef.current = lang;
+      loadWeatherData(currentCity.id);
+    }
+  }, [lang]);
+
   const handleSearch = async (query) => {
     router.push('/city-list');
   };
@@ -400,7 +410,7 @@ export default function HomeScreen() {
           <View style={styles.locationBar}>
             <TouchableOpacity style={styles.locationBtn} onPress={() => router.push('/city-list')}>
               <Ionicons name="location-sharp" size={16} color={Accent.aurora} />
-              <Text style={styles.locationText}>{currentCity?.name || '北京'}</Text>
+              <Text style={styles.locationText}>{localizeCityName(currentCity?.name, lang) || t('home.defaultCity')}</Text>
               <Ionicons name="chevron-down" size={14} color={TextColor.secondary} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.searchIconBtn} onPress={() => router.push('/city-list')}>
