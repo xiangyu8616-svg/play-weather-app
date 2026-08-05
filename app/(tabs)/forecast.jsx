@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   dayName: {
-    width: 68,
+    width: 86,
     fontSize: FontSize.body,
     color: TextColor.primary,
     fontWeight: FontWeight.medium,
