@@ -62,7 +62,7 @@
 | 2.6 | EAS Build 双端 profile | iOS TestFlight + Android 封闭测试（Play 新号需约14天封闭测试，提前启动） |
 | 2.7 | 测试补齐 | ✅ 2026-08-05 完成：现象算法（霞光/丁达尔/彩虹/日晕/拍摄窗口 28 用例）、缓存层（读写/TTL/双层/清理/装饰器 13 用例）、API 代理（白名单/参数透传/缓存/限流 15 用例），共 56 用例全过；统一入口 `npm test`（Node 24 原生 TS + ESM loader 重定向 AsyncStorage stub），基建在 `scripts/`（tap 断言库/loader/stub） |
 | 2.8 | 性能 | ✅ 2026-08-05 完成：`services/performance/deviceTier.ts` 设备分档（hardwareConcurrency/deviceMemory 信号 → low/medium/high，25 单测）；首页地球仪默认模式按分档下发（低端机直接 performance 档，原硬编码 balanced）；帧率检测自动降级——web 版 2s 窗口连续 2 次 <30fps 沿质量阶梯降级（像素比 1→0.75→0.6→0.5 + 最低档关大气层），native WebView 版页内自闭环降级（无需 RN 往返）；线上实测高端档渲染正常 |
-| 2.9 | 社区功能开发（S2末启动） | 帖子列表/发帖/点赞，复用 PhotoCard.jsx |
+| 2.9 | 社区功能开发（S2末启动） | ✅ 2026-08-05 完成（列表/发帖/点赞，评论留待后续）：迁移 003（`post_likes` 表 + 触发器维护 likes_count + profiles 公开读 + post-photos 公开桶 uid 目录隔离）；`services/communityService.js`（游标分页+批量补作者资料/乐观点赞+并发去重/敏感词预检/EXIF 脱敏上传）；PhotoCard v2 复用改造（图片与对比条可选、点赞态、i18n，**布局改 StyleSheet——发现 NativeWind className 在 web 构建不生效**，全站仅地球仪 native 版仍用 className 但走 WebView 不受影响）；community.jsx 信息流+发帖器（500字+地点+照片，web file input / native expo-image-picker）；首条示例帖已入库（3.2 冷启动首帖），线上实测信息流/登录引导/空态通过 |
 
 ## S3 冷启动（第 9–12 周）
 
