@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Accent, TextColor, Spacing, Radius, FontSize, FontWeight, Brand, goldAlpha, whiteAlpha } from '../../styles/designTokens';
+import { Accent, Bg, TextColor, Spacing, Radius, FontSize, FontWeight, Brand, goldAlpha, whiteAlpha } from '../../styles/designTokens';
 import { useI18n } from '../../services/i18n';
 
 export default function CommunityScreen() {
@@ -36,6 +36,16 @@ export default function CommunityScreen() {
             <Ionicons name="home-outline" size={18} color={Brand.Gold} />
             <Text style={styles.backButtonText}>{t('community.backHome')}</Text>
           </TouchableOpacity>
+
+          {/* 举报/联系入口（合规） */}
+          <TouchableOpacity
+            style={styles.reportLink}
+            onPress={() => Linking.openURL(`mailto:xiangyu.8616@gmail.com?subject=${encodeURIComponent('内容举报 Content Report')}`)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="flag-outline" size={14} color={TextColor.muted} />
+            <Text style={styles.reportLinkText}>{t('community.report')}</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -43,7 +53,7 @@ export default function CommunityScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0E17' },
+  container: { flex: 1, backgroundColor: Bg.primary },
   scroll: { flex: 1 },
   scrollContent: {
     flex: 1,
@@ -55,7 +65,7 @@ const styles = StyleSheet.create({
   comingSoonCard: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(18, 24, 42, 0.75)',
+    backgroundColor: Bg.glass,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: whiteAlpha(0.06),
@@ -78,14 +88,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FontSize.h1,
     fontWeight: FontWeight.bold,
-    color: TextColor.Primary,
+    color: TextColor.primary,
     marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: FontSize.body,
     fontWeight: FontWeight.regular,
-    color: TextColor.Secondary,
+    color: TextColor.secondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: Spacing.xxl,
@@ -105,5 +115,17 @@ const styles = StyleSheet.create({
     fontSize: FontSize.body,
     fontWeight: FontWeight.semiBold,
     color: Brand.Gold,
+  },
+  reportLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.xl,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+  },
+  reportLinkText: {
+    fontSize: FontSize.caption,
+    color: TextColor.muted,
   },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Brand, TextColor, Spacing, Radius, FontSize, FontWeight, goldAlpha, whiteAlpha } from '../styles/designTokens';
+import { Accent, Brand, TextColor, Spacing, Radius, FontSize, FontWeight, goldAlpha, whiteAlpha } from '../styles/designTokens';
 import AstroPanel from './AstroPanel';
 
 /**
@@ -19,10 +19,10 @@ export default function PhotoTimingPanel({
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <Text style={styles.sectionTitle}>📷 摄影条件</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Text style={{ fontSize: 15, color: '#30D158', fontWeight: '600' }}>
+          <Text style={{ fontSize: 15, color: Accent.success, fontWeight: '600' }}>
             {photoScore || '--'}分
           </Text>
-          <Text style={{ fontSize: 13, color: '#30D158' }}>👍</Text>
+          <Text style={{ fontSize: 13, color: Accent.success }}>👍</Text>
         </View>
       </View>
 
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: FontSize.h2,
     fontWeight: FontWeight.semiBold,
-    color: TextColor.Primary,
+    color: TextColor.primary,
     marginBottom: Spacing.sm,
   },
 });

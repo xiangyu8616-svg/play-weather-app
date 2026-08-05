@@ -14,6 +14,7 @@ export const Bg = {
   card:      '#12121A',   // 卡片背景
   elevated:  '#1A1A24',   // 浮层/弹窗
   overlay:   'rgba(11, 11, 16, 0.85)',
+  glass:     'rgba(18, 18, 26, 0.75)',   // 玻璃卡片底（card 的 75% 透明）
 };
 
 /** 强调色 — 极光 + 星光 */
@@ -25,6 +26,7 @@ export const Accent = {
   starDim:    'rgba(255, 215, 0, 0.25)',
   danger:     '#FF4444',   // KP 高指数/警示
   success:    '#22C55E',   // 可见/良好
+  blueHour:   '#60A5FA',   // 蓝时刻/信息蓝
 };
 
 /** 文字色 */

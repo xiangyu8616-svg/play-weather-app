@@ -159,12 +159,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FontSize.h3,
     fontWeight: FontWeight.semiBold,
-    color: TextColor.Primary,
+    color: TextColor.primary,
     marginBottom: Spacing.xs,
   },
   desc: {
     fontSize: FontSize.caption,
-    color: TextColor.Secondary,
+    color: TextColor.secondary,
     marginBottom: Spacing.lg,
   },
   input: {
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: 12,
     fontSize: FontSize.body,
-    color: TextColor.Primary,
+    color: TextColor.primary,
     marginBottom: Spacing.sm,
   },
   codeInput: {

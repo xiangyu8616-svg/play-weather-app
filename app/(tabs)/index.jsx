@@ -25,7 +25,7 @@ import { computeShootingWindow } from '../../services/phenomenon/shootingWindow'
 import { scheduleWindowReminder, getScheduledWindowReminder } from '../../services/reminderService';
 import {
   Bg, Accent, TextColor, Spacing, Radius,
-  FontSize, FontWeight, auroraAlpha, whiteAlpha,
+  FontSize, FontWeight, FontFamily, auroraAlpha, whiteAlpha,
   Shadow, HeroCardStyle, CardStyle, getWeatherBackground, getWeatherIconColor,
 } from '../../styles/designTokens';
 
@@ -604,14 +604,14 @@ export default function HomeScreen() {
             <View style={[styles.infoCard, styles.blueCard]}>
               <View style={styles.infoCardHeader}>
                 <Ionicons name="moon" size={16} color="#60A5FA" />
-                <Text style={[styles.infoCardTitle, { color: '#60A5FA' }]}>Blue Hour</Text>
+                <Text style={[styles.infoCardTitle, { color: Accent.blueHour }]}>Blue Hour</Text>
               </View>
               <Text style={styles.infoCardTime}>
                 {astronomyData?.blueHour?.start || '--'} - {astronomyData?.blueHour?.end || '--'}
               </Text>
               <View style={styles.countdownRow}>
                 <Ionicons name="moon-outline" size={12} color="#60A5FA" />
-                <Text style={[styles.countdownText, { color: '#60A5FA' }]}>{t('home.afterSunset')}</Text>
+                <Text style={[styles.countdownText, { color: Accent.blueHour }]}>{t('home.afterSunset')}</Text>
               </View>
             </View>
           </View>
@@ -962,9 +962,9 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   shootRemindBtnDone: {
-    backgroundColor: 'rgba(100, 255, 218, 0.08)',
+    backgroundColor: auroraAlpha(0.08),
     borderWidth: 1,
-    borderColor: 'rgba(100, 255, 218, 0.25)',
+    borderColor: auroraAlpha(0.25),
   },
   shootRemindBtnFailed: {
     backgroundColor: 'rgba(255, 68, 68, 0.08)',
@@ -995,7 +995,7 @@ const styles = StyleSheet.create({
   },
   hourlyPop: {
     fontSize: FontSize.micro,
-    color: '#60A5FA',
+    color: Accent.blueHour,
   },
   weatherMain: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

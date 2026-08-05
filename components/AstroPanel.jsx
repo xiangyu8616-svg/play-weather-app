@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   },
   goldenHourCountdown: {
     fontSize: FontSize.caption,
-    color: TextColor.Secondary,
+    color: TextColor.secondary,
     marginTop: 4,
   },
 });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, StyleSheet, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Accent, Bg, TextColor, Spacing, Radius, FontSize, FontWeight, Surface, Brand, goldAlpha, auroraAlpha, whiteAlpha } from '../../styles/designTokens';
@@ -93,10 +93,30 @@ export default function ProfileScreen() {
     { icon: 'sunny-outline', label: t('profile.notifDaily'), desc: t('profile.notifDailyDesc'), value: dailyForecast, set: handleToggleDailyForecast },
   ];
 
+  const PRIVACY_URL = 'https://play-weather-app.vercel.app/privacy-policy.html';
+  const CONTACT_MAIL = 'xiangyu.8616@gmail.com';
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      t('profile.deleteConfirmTitle'),
+      t('profile.deleteConfirmMsg'),
+      [
+        { text: t('profile.cancel'), style: 'cancel' },
+        {
+          text: t('profile.confirmDelete'),
+          style: 'destructive',
+          onPress: () => Linking.openURL(
+            `mailto:${CONTACT_MAIL}?subject=${encodeURIComponent('删除账号 Account Deletion')}&body=${encodeURIComponent(`注册邮箱 Registered email: ${user?.email || ''}`)}`
+          ),
+        },
+      ]
+    );
+  };
+
   const aboutItems = [
-    { icon: 'help-circle-outline', label: t('profile.help'), color: '#FFD60A' },
-    { icon: 'shield-checkmark-outline', label: t('profile.privacy'), color: '#5B6CF9' },
-    { icon: 'code-slash-outline', label: t('profile.licenses'), color: '#30D158' },
+    { icon: 'help-circle-outline', label: t('profile.help'), color: Accent.star, onPress: () => Linking.openURL(`mailto:${CONTACT_MAIL}?subject=${encodeURIComponent('玩天气反馈 PlayWeather Feedback')}`) },
+    { icon: 'shield-checkmark-outline', label: t('profile.privacy'), color: '#5B6CF9', onPress: () => Linking.openURL(PRIVACY_URL) },
+    { icon: 'code-slash-outline', label: t('profile.licenses'), color: Accent.success, onPress: () => Linking.openURL('https://github.com/xiangyu8616-svg/play-weather-app') },
     { icon: 'information-circle-outline', label: t('profile.version'), sub: 'v1.0.0', color: 'rgba(255,255,255,0.4)' },
   ];
 
@@ -215,7 +235,7 @@ export default function ProfileScreen() {
               <Switch
                 value={item.value}
                 onValueChange={item.set}
-                trackColor={{ false: 'rgba(255,255,255,0.1)', true: '#DAA520' }}
+                trackColor={{ false: 'rgba(255,255,255,0.1)', true: Accent.star }}
                 thumbColor="#FFFFFF"
               />
             </View>
@@ -230,6 +250,8 @@ export default function ProfileScreen() {
               key={i}
               style={[styles.settingRow, i < aboutItems.length - 1 && styles.settingRowBorder]}
               activeOpacity={0.7}
+              onPress={item.onPress}
+              disabled={!item.onPress}
             >
               <Ionicons name={item.icon} size={20} color={item.color} />
               <View style={styles.settingText}>
@@ -242,12 +264,21 @@ export default function ProfileScreen() {
               )}
             </TouchableOpacity>
           ))}
+          {user && (
+            <TouchableOpacity style={styles.settingRow} activeOpacity={0.7} onPress={handleDeleteAccount}>
+              <Ionicons name="trash-outline" size={20} color={Accent.danger} />
+              <View style={styles.settingText}>
+                <Text style={[styles.settingLabel, { color: Accent.danger }]}>{t('profile.deleteAccount')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.2)" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* 7. 退出登录（仅登录后显示） */}
         {user && (
           <TouchableOpacity style={styles.logoutBtn} activeOpacity={0.7} onPress={signOut}>
-            <Ionicons name="log-out-outline" size={18} color="#FF375F" />
+            <Ionicons name="log-out-outline" size={18} color={Accent.danger} />
             <Text style={styles.logoutText}>{t('profile.logout')}</Text>
           </TouchableOpacity>
         )}
@@ -271,7 +302,7 @@ const styles = StyleSheet.create({
   scrollContent: { padding: Spacing.lg, paddingBottom: 100 },
 
   glassCard: {
-    backgroundColor: 'rgba(18, 24, 42, 0.75)',
+    backgroundColor: Bg.glass,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: whiteAlpha(0.06),
@@ -281,7 +312,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: FontSize.h3,
     fontWeight: FontWeight.semiBold,
-    color: TextColor.Primary,
+    color: TextColor.primary,
     marginBottom: Spacing.md,
   },
 
@@ -289,7 +320,7 @@ const styles = StyleSheet.create({
   appHeader: {
     alignItems: 'center',
     paddingVertical: Spacing.xxl,
-    backgroundColor: 'rgba(18, 24, 42, 0.75)',
+    backgroundColor: Bg.glass,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: whiteAlpha(0.06),
@@ -305,9 +336,9 @@ const styles = StyleSheet.create({
   appIcon: { fontSize: 36 },
   appName: {
     fontSize: FontSize.h1, fontWeight: FontWeight.bold,
-    color: TextColor.Primary, marginBottom: Spacing.xs,
+    color: TextColor.primary, marginBottom: Spacing.xs,
   },
-  appTagline: { fontSize: FontSize.body, color: TextColor.Secondary, marginBottom: Spacing.md },
+  appTagline: { fontSize: FontSize.body, color: TextColor.secondary, marginBottom: Spacing.md },
   appVersion: { fontSize: FontSize.caption, color: TextColor.Disabled },
 
   // 统计数据胶囊
@@ -327,7 +358,7 @@ const styles = StyleSheet.create({
   // 城市管理
   cityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cityInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  cityName: { fontSize: FontSize.body, fontWeight: FontWeight.semiBold, color: TextColor.Primary },
+  cityName: { fontSize: FontSize.body, fontWeight: FontWeight.semiBold, color: TextColor.primary },
   citySwitchBtn: {
     backgroundColor: goldAlpha(0.15), borderWidth: 1, borderColor: goldAlpha(0.25),
     paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Radius.full,
@@ -342,7 +373,7 @@ const styles = StyleSheet.create({
   settingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
   settingRowBorder: { borderBottomWidth: 1, borderBottomColor: whiteAlpha(0.06), marginBottom: 1 },
   settingText: { flex: 1, marginLeft: Spacing.md },
-  settingLabel: { fontSize: FontSize.body, fontWeight: FontWeight.medium, color: TextColor.Primary },
+  settingLabel: { fontSize: FontSize.body, fontWeight: FontWeight.medium, color: TextColor.primary },
   settingDesc: { fontSize: FontSize.caption, color: TextColor.Tertiary, marginTop: 2 },
 
   // Badge 和 关于
@@ -356,7 +387,7 @@ const styles = StyleSheet.create({
   // 退出登录
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
-    backgroundColor: 'rgba(255,55,95,0.08)', borderWidth: 1, borderColor: 'rgba(255,55,95,0.2)',
+    backgroundColor: 'rgba(255,68,68,0.08)', borderWidth: 1, borderColor: 'rgba(255,68,68,0.2)',
     borderRadius: Radius.lg, paddingVertical: 14, marginTop: Spacing.xs, marginBottom: Spacing.md,
   },
   logoutText: { fontSize: FontSize.body, color: Accent.danger, fontWeight: FontWeight.medium },

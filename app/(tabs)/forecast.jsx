@@ -217,7 +217,7 @@ export default function ForecastScreen() {
               <Text style={styles.legendText}>{t('forecast.goldenLegend', { range: '17:30-19:00' })}</Text>
             </View>
             <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#60A5FA' }]} />
+              <View style={[styles.legendDot, { backgroundColor: Accent.blueHour }]} />
               <Text style={styles.legendText}>{t('forecast.blueLegend', { range: '19:00-19:45' })}</Text>
             </View>
           </View>
