@@ -19,6 +19,7 @@ import { getWeatherIconName } from '../../services/weather/weatherIcons';
 import {
   getPhotographyTimes, formatTime, getMoonPhase,
   getMilkyWayVisibility, getConstellationPosition, getSunPosition,
+  moonPhaseNameEn, seasonFactorEn, mwQualityEn,
 } from '../../services/astronomyService';
 import { calculateGlowForecast } from '../../services/phenomenon/glow';
 import { calculateRainbowProbability, calculateHaloProbability } from '../../services/phenomenon/halo';
@@ -647,7 +648,7 @@ export default function HomeScreen() {
                 <Ionicons name="moon" size={20} color={TextColor.secondary} />
               </View>
               <View style={styles.astroInfo}>
-                <Text style={styles.astroName}>{moonPhase?.phaseName || '--'}</Text>
+                <Text style={styles.astroName}>{(lang === 'en' ? moonPhaseNameEn(moonPhase?.phaseName || '') : moonPhase?.phaseName) || '--'}</Text>
                 <Text style={styles.astroMeta}>
                   {moonPhase?.illumination != null ? t('home.moonIllumination', { v: Math.round(moonPhase.illumination) }) : '--'}
                 </Text>
@@ -671,7 +672,9 @@ export default function HomeScreen() {
                   </View>
                 </View>
                 <Text style={styles.astroMeta}>
-                  {milkyWay?.visible ? t('home.mwQuality', { q: milkyWay.quality }) : milkyWay?.seasonFactor || t('home.mwOffSeason')}
+                  {milkyWay?.visible
+                    ? t('home.mwQuality', { q: lang === 'en' ? mwQualityEn(milkyWay.quality) : milkyWay.quality })
+                    : (lang === 'en' ? seasonFactorEn(milkyWay?.seasonFactor || '') : milkyWay?.seasonFactor) || t('home.mwOffSeason')}
                 </Text>
               </View>
             </View>

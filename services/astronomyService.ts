@@ -40,6 +40,29 @@ function localizeMoonPhase(zh: string): string {
   return dataLang() === 'en' ? (MOON_PHASE_EN[zh] || zh) : zh;
 }
 
+// 展示层英化：缓存/计算结果始终为中文，渲染时按界面语言转换（防缓存竞态）
+const SEASON_FACTOR_EN: Record<string, string> = {
+  '夏季银河最佳': 'Best in summer',
+  '适宜观测': 'Good for viewing',
+  '非银河季': 'Off season',
+  '计算失败': 'Unavailable',
+};
+const MW_QUALITY_EN: Record<string, string> = {
+  '极佳': 'Excellent',
+  '良好': 'Good',
+  '一般': 'Fair',
+  '较差': 'Poor',
+};
+export function moonPhaseNameEn(zh: string): string {
+  return MOON_PHASE_EN[zh] || zh;
+}
+export function seasonFactorEn(zh: string): string {
+  return SEASON_FACTOR_EN[zh] || zh;
+}
+export function mwQualityEn(zh: string): string {
+  return MW_QUALITY_EN[zh] || zh;
+}
+
 // 星座名 zh → en（查询仍以中文名为键，仅展示层本地化）
 const CONSTELLATION_EN: Record<string, string> = {
   '猎户座': 'Orion',
