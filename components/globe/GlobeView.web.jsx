@@ -1,5 +1,8 @@
 import React, { useRef, useMemo, useEffect, useState } from 'react';
 import { View } from 'react-native';
+import {
+  GLOBE_QUALITY_LADDER, initialQualityIndex, nextDegradeIndex, shouldDegrade,
+} from '../../services/performance/deviceTier';
 
 /**
  * 3D 地球仪组件 - Web 平台专用版本
@@ -102,6 +105,7 @@ const GlobeView = React.memo(function GlobeView({
 }) {
   const containerRef = useRef(null);
   const globeRef = useRef(null);
+  const fpsRafIdRef = useRef(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // 根据性能模式配置点数
@@ -173,11 +177,40 @@ const GlobeView = React.memo(function GlobeView({
 
         globeRef.current = globe;
 
-        // 设置渲染器像素比（性能优化）
-        const pixelRatio = performanceMode === 'performance' ? 0.5 : 
-                          performanceMode === 'quality' ? 1 : 0.75;
-        globe.renderer().setPixelRatio(pixelRatio);
-        globe.renderer().antialias = performanceMode !== 'performance';
+        // 初始质量：按性能模式取阶梯起点并应用（像素比 + 大气层）
+        let qualityIndex = initialQualityIndex(performanceMode);
+        const applyQuality = (idx) => {
+          const step = GLOBE_QUALITY_LADDER[idx];
+          globe.renderer().setPixelRatio(step.pixelRatio);
+          globe.showAtmosphere(step.atmosphere);
+        };
+        applyQuality(qualityIndex);
+
+        // 帧率检测自动降级：2 秒一个窗口，连续 2 个窗口 <30fps 降一级，直至最低档
+        let fpsFrameCount = 0;
+        let fpsWindowStart = performance.now();
+        let consecutiveLowWindows = 0;
+        const fpsMonitor = () => {
+          if (!isMounted) return;
+          fpsFrameCount++;
+          const now = performance.now();
+          const elapsed = now - fpsWindowStart;
+          if (elapsed >= 2000) {
+            const avgFps = (fpsFrameCount * 1000) / elapsed;
+            consecutiveLowWindows = avgFps < 30 ? consecutiveLowWindows + 1 : 0;
+            if (shouldDegrade(avgFps, consecutiveLowWindows)) {
+              const next = nextDegradeIndex(qualityIndex);
+              if (next == null) return; // 已到最低档，停止监控
+              qualityIndex = next;
+              applyQuality(qualityIndex);
+              consecutiveLowWindows = 0;
+            }
+            fpsFrameCount = 0;
+            fpsWindowStart = now;
+          }
+          fpsRafIdRef.current = requestAnimationFrame(fpsMonitor);
+        };
+        fpsRafIdRef.current = requestAnimationFrame(fpsMonitor);
 
         // 控制器设置
         const controls = globe.controls();
@@ -210,6 +243,10 @@ const GlobeView = React.memo(function GlobeView({
     // 清理函数
     return () => {
       isMounted = false;
+      if (fpsRafIdRef.current != null) {
+        cancelAnimationFrame(fpsRafIdRef.current);
+        fpsRafIdRef.current = null;
+      }
       if (globeRef.current) {
         // 清理 Three.js 资源
         const globe = globeRef.current;

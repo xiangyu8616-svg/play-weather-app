@@ -193,6 +193,18 @@ const GlobeView = React.memo(function GlobeView({
     const ANTI_ALIASING = ${antiAliasing};
     const SHADOW_QUALITY = '${shadowQuality}';
     const MAX_FPS = 60;
+
+    // 帧率自动降级阶梯（页内自闭环，无需 RN 往返）
+    const QUALITY_LADDER = [0.75, 0.6, 0.5];
+    let ladderIdx = QUALITY_LADDER.indexOf(TEXTURE_QUALITY);
+    if (ladderIdx < 0) ladderIdx = TEXTURE_QUALITY >= 0.9 ? 0 : QUALITY_LADDER.length - 1;
+    let consecutiveLowWindows = 0;
+    function applyDegrade() {
+      globe.renderer().setPixelRatio(QUALITY_LADDER[ladderIdx]);
+      if (ladderIdx === QUALITY_LADDER.length - 1) {
+        globe.showAtmosphere(false); // 最低档关闭大气层
+      }
+    }
     
     // 现象数据
     const pointsData = ${pointsData};
@@ -298,17 +310,29 @@ const GlobeView = React.memo(function GlobeView({
       }));
     });
 
-    // FPS 监控（可选）
+    // FPS 监控 + 自动降级
     let lastTime = performance.now();
     let frameCount = 0;
     function monitorFPS() {
       frameCount++;
       const currentTime = performance.now();
       if (currentTime - lastTime >= 1000) {
+        const fps = frameCount;
         window.ReactNativeWebView.postMessage(JSON.stringify({
           type: 'fps',
-          fps: frameCount
+          fps: fps
         }));
+        // 连续 2 个低帧窗口（<30fps）降一级，直至最低档
+        consecutiveLowWindows = fps < 30 ? consecutiveLowWindows + 1 : 0;
+        if (consecutiveLowWindows >= 2 && ladderIdx < QUALITY_LADDER.length - 1) {
+          ladderIdx++;
+          applyDegrade();
+          consecutiveLowWindows = 0;
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'degraded',
+            pixelRatio: QUALITY_LADDER[ladderIdx]
+          }));
+        }
         frameCount = 0;
         lastTime = currentTime;
       }

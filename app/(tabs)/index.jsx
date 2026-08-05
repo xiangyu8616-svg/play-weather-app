@@ -22,6 +22,7 @@ import {
   moonPhaseNameEn, seasonFactorEn, mwQualityEn,
 } from '../../services/astronomyService';
 import { calculateGlowForecast } from '../../services/phenomenon/glow';
+import { getDeviceTier, performanceModeForTier } from '../../services/performance/deviceTier';
 import { calculateRainbowProbability, calculateHaloProbability } from '../../services/phenomenon/halo';
 import { computeShootingWindow } from '../../services/phenomenon/shootingWindow';
 import { scheduleWindowReminder, getScheduledWindowReminder } from '../../services/reminderService';
@@ -203,6 +204,9 @@ export default function HomeScreen() {
       });
     } catch { return null; }
   }, [photoTimes, glowForecast, nowWeather]);
+
+  // 地球仪默认性能模式：低端机直接 performance（optimized 档），帧率监控会进一步自动降级
+  const globePerformanceMode = useMemo(() => performanceModeForTier(getDeviceTier()), []);
 
   // 启动时恢复已设置的提醒状态
   useEffect(() => {
@@ -714,7 +718,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionTitle}>{t('home.globeTitle')}</Text>
             <View style={[styles.globeWrapper, { height: Math.min(screenHeight * 0.28, 280) }]}>
               <View style={styles.globeInner}>
-                <GlobeView selectedDay={1} selectedPhenomenon="all" performanceMode="balanced" />
+                <GlobeView selectedDay={1} selectedPhenomenon="all" performanceMode={globePerformanceMode} />
               </View>
             </View>
           </View>
