@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import FadeInView from '../animations/FadeInView';
 import { getProbabilityColor } from '../../utils/colors';
@@ -10,7 +10,8 @@ import { Accent } from '../../styles/designTokens';
  * 社区照片卡片 - 深色玻璃态主题
  * 显示用户实拍作品、预报 vs 实拍对比（可选）、互动数据
  *
- * v2（ROADMAP 2.9）：图片/对比条可选；点赞按钮支持 liked/onLike；文案走 i18n
+ * v2（ROADMAP 2.9）：图片与对比条可选；点赞按钮支持 liked/onLike；文案走 i18n；
+ * 布局全部使用 StyleSheet（NativeWind className 在 web 构建不生效）
  */
 const PhotoCard = React.memo(function PhotoCard({
   user,
@@ -42,7 +43,7 @@ const PhotoCard = React.memo(function PhotoCard({
   };
   const level = hasCompare ? getLevel(actual) : null;
 
-  // 无图帖子给一个稳定的文字区高度感；有图用种子高度营造瀑布感
+  // 有图用种子高度营造瀑布感
   const getImageDimensions = (seed) => {
     const sizes = [
       { w: 300, h: 400 },
@@ -58,16 +59,7 @@ const PhotoCard = React.memo(function PhotoCard({
 
   return (
     <FadeInView delay={index * 100} duration={500}>
-      <View className="rounded-2xl overflow-hidden mb-4" style={{
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.06)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
-      }}>
+      <View style={styles.card}>
         {/* 照片区域（可选） */}
         {imageUrl ? (
           <Image
@@ -80,35 +72,31 @@ const PhotoCard = React.memo(function PhotoCard({
         ) : null}
 
         {/* 用户信息 */}
-        <View className="flex-row items-center px-4 pt-4 pb-3">
+        <View style={styles.userRow}>
           {avatar ? (
             <Image
               source={{ uri: avatar }}
-              style={{ width: 32, height: 32, borderRadius: 16 }}
+              style={styles.avatar}
             />
           ) : (
-            <View style={{
-              width: 32, height: 32, borderRadius: 16,
-              backgroundColor: 'rgba(238,184,42,0.15)',
-              justifyContent: 'center', alignItems: 'center',
-            }}>
+            <View style={styles.avatarPlaceholder}>
               <Ionicons name="person" size={16} color="#EEB82A" />
             </View>
           )}
-          <View className="ml-3 flex-1">
-            <Text className="text-sm font-bold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>
               {user}
             </Text>
-            <View className="flex-row items-center mt-0.5">
+            <View style={styles.metaRow}>
               {location ? (
                 <>
                   <Ionicons name="location" size={12} color="rgba(255,255,255,0.35)" />
-                  <Text className="text-xxs ml-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  <Text style={[styles.metaText, { marginLeft: 4 }]}>
                     {location}
                   </Text>
                 </>
               ) : null}
-              <Text className="text-xxs ml-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              <Text style={[styles.metaText, { marginLeft: 8, color: 'rgba(255,255,255,0.3)' }]}>
                 • {time}
               </Text>
             </View>
@@ -117,82 +105,138 @@ const PhotoCard = React.memo(function PhotoCard({
 
         {/* 预报 vs 实拍对比条（可选） */}
         {hasCompare && (
-          <View className="mx-4 mb-3 rounded-xl p-3" style={{
-            backgroundColor: 'rgba(218,165,32,0.08)',
-            borderWidth: 1,
-            borderColor: 'rgba(218,165,32,0.15)',
-          }}>
-            <View className="flex-row items-center justify-between mb-2">
+          <View style={styles.compareBar}>
+            <View style={[styles.rowBetween, { marginBottom: 8 }]}>
               <View>
-                <Text className="text-xxs" style={{ color: 'rgba(255,255,255,0.4)' }}>{t('community.forecastProb')}</Text>
-                <Text className="text-lg font-bold" style={{ color: '#EEB82A' }}>{forecast}%</Text>
+                <Text style={styles.compareLabel}>{t('community.forecastProb')}</Text>
+                <Text style={[styles.compareValue, { color: '#EEB82A' }]}>{forecast}%</Text>
               </View>
               <Ionicons name="arrow-forward" size={18} color="rgba(255,255,255,0.35)" />
               <View>
-                <Text className="text-xxs" style={{ color: 'rgba(255,255,255,0.4)' }}>{t('community.actualEffect')}</Text>
-                <Text className="text-lg font-bold" style={{ color: actualColor }}>{actual}%</Text>
+                <Text style={styles.compareLabel}>{t('community.actualEffect')}</Text>
+                <Text style={[styles.compareValue, { color: actualColor }]}>{actual}%</Text>
               </View>
               <View
-                className="px-2 py-0.5 rounded-full"
-                style={{
+                style={[styles.levelBadge, {
                   backgroundColor: level.color + '18',
-                  borderWidth: 1,
                   borderColor: level.color + '30',
-                }}
+                }]}
               >
-                <Text className="text-xxs font-bold" style={{ color: level.color }}>
+                <Text style={[styles.levelBadgeText, { color: level.color }]}>
                   {t(`community.${level.key}`)}
                 </Text>
               </View>
             </View>
 
             {/* 进度条 */}
-            <View style={{
-              height: 4,
-              backgroundColor: 'rgba(255,255,255,0.08)',
-              borderRadius: 2,
-              overflow: 'hidden',
-            }}>
-              <View style={{
-                width: `${actual}%`,
-                height: '100%',
-                backgroundColor: actualColor,
-                borderRadius: 2,
-              }} />
+            <View style={styles.progressBg}>
+              <View style={[styles.progressFill, { width: `${actual}%`, backgroundColor: actualColor }]} />
             </View>
           </View>
         )}
 
         {/* 描述 */}
         {description ? (
-          <View className="px-4 mb-3">
-            <Text className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }} numberOfLines={5}>
+          <View style={styles.descriptionWrap}>
+            <Text style={styles.description} numberOfLines={5}>
               {description}
             </Text>
           </View>
         ) : null}
 
         {/* 互动栏 */}
-        <View className="flex-row items-center px-4 py-3" style={{
-          borderTopWidth: 1,
-          borderTopColor: 'rgba(255,255,255,0.04)'
-        }}>
-          <TouchableOpacity className="flex-row items-center mr-6" onPress={onLike} activeOpacity={0.7}>
+        <View style={styles.actionBar}>
+          <TouchableOpacity style={[styles.actionItem, { marginRight: 24 }]} onPress={onLike} activeOpacity={0.7}>
             <Ionicons name={liked ? 'heart' : 'heart-outline'} size={20} color={likeColor} />
-            <Text className="ml-1.5 text-xs" style={{ color: likeColor }}>{likes}</Text>
+            <Text style={[styles.actionText, { color: likeColor }]}>{likes}</Text>
           </TouchableOpacity>
-          <View className="flex-row items-center mr-6">
+          <View style={[styles.actionItem, { marginRight: 24 }]}>
             <Ionicons name="chatbubble-outline" size={20} color="rgba(255,255,255,0.35)" />
-            <Text className="ml-1.5 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{comments}</Text>
+            <Text style={styles.actionText}>{comments}</Text>
           </View>
-          <TouchableOpacity className="flex-row items-center flex-1 justify-end" onPress={onShare} activeOpacity={0.7}>
+          <TouchableOpacity style={[styles.actionItem, styles.actionShare]} onPress={onShare} activeOpacity={0.7}>
             <Ionicons name="share-outline" size={20} color="rgba(255,255,255,0.35)" />
-            <Text className="ml-1.5 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{t('community.share')}</Text>
+            <Text style={styles.actionText}>{t('community.share')}</Text>
           </TouchableOpacity>
         </View>
       </View>
     </FadeInView>
   );
+});
+
+const styles = StyleSheet.create({
+  card: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  userRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  avatar: { width: 32, height: 32, borderRadius: 16 },
+  avatarPlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(238,184,42,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  userInfo: { marginLeft: 12, flex: 1 },
+  userName: { fontSize: 14, fontWeight: '700', color: 'rgba(255,255,255,0.85)' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  metaText: { fontSize: 10, color: 'rgba(255,255,255,0.35)' },
+  compareBar: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: 'rgba(218,165,32,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(218,165,32,0.15)',
+  },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  compareLabel: { fontSize: 10, color: 'rgba(255,255,255,0.4)' },
+  compareValue: { fontSize: 18, fontWeight: '700' },
+  levelBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 9999,
+    borderWidth: 1,
+  },
+  levelBadgeText: { fontSize: 10, fontWeight: '700' },
+  progressBg: {
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: 2 },
+  descriptionWrap: { paddingHorizontal: 16, marginBottom: 12 },
+  description: { fontSize: 12, lineHeight: 18, color: 'rgba(255,255,255,0.55)' },
+  actionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.04)',
+  },
+  actionItem: { flexDirection: 'row', alignItems: 'center' },
+  actionShare: { flex: 1, justifyContent: 'flex-end' },
+  actionText: { marginLeft: 6, fontSize: 12, color: 'rgba(255,255,255,0.35)' },
 });
 
 export default PhotoCard;
