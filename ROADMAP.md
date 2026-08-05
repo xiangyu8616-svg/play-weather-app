@@ -61,7 +61,7 @@
 | 2.5 | 商店素材 | ✅ 2026-08-05 完成（截图部分）：英文上架文案 `docs/store-listing.md`（App Store 名称/副标题/关键词/描述 + Play 短描述）；截图全套 6+5 张——6.7"（1290×2796）：01-home-zh、02-home-en、03-forecast-en、04-profile-en、05-phenomenon-en（月相/银河+大气光学）、06-globe-en（晨昏线地球）；6.5"（1242×2688）`store-assets/6.5inch/` 五张英文对应；i18n 瑕疵全部修复（`83a174b`/`dc9cf01`/`43ea346`）：城市名英化（cityNames.js 18 城映射）、风向/天气文本英化（windDirEn/weatherTextEn）、月相/银河质量/季节因素英化（moonPhaseNameEn/seasonFactorEn/mwQualityEn）、语言切换自动重拉（prevLangRef）、Today/Tomorrow 折行修复（dayName 宽 86），均线上实测通过 |
 | 2.6 | EAS Build 双端 profile | iOS TestFlight + Android 封闭测试（Play 新号需约14天封闭测试，提前启动） |
 | 2.7 | 测试补齐 | ✅ 2026-08-05 完成：现象算法（霞光/丁达尔/彩虹/日晕/拍摄窗口 28 用例）、缓存层（读写/TTL/双层/清理/装饰器 13 用例）、API 代理（白名单/参数透传/缓存/限流 15 用例），共 56 用例全过；统一入口 `npm test`（Node 24 原生 TS + ESM loader 重定向 AsyncStorage stub），基建在 `scripts/`（tap 断言库/loader/stub） |
-| 2.8 | 性能 | 地球仪低端机默认 optimized 版 + 帧率检测自动降级 |
+| 2.8 | 性能 | ✅ 2026-08-05 完成：`services/performance/deviceTier.ts` 设备分档（hardwareConcurrency/deviceMemory 信号 → low/medium/high，25 单测）；首页地球仪默认模式按分档下发（低端机直接 performance 档，原硬编码 balanced）；帧率检测自动降级——web 版 2s 窗口连续 2 次 <30fps 沿质量阶梯降级（像素比 1→0.75→0.6→0.5 + 最低档关大气层），native WebView 版页内自闭环降级（无需 RN 往返）；线上实测高端档渲染正常 |
 | 2.9 | 社区功能开发（S2末启动） | 帖子列表/发帖/点赞，复用 PhotoCard.jsx |
 
 ## S3 冷启动（第 9–12 周）
