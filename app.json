@@ -37,6 +37,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1015e517-11ad-469d-8b66-b8dec49c58c0"
+      }
+    },
+    "owner": "stevenzhus-team"
   }
 }
