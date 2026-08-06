@@ -13,13 +13,12 @@
 
 > ⚠️ Play 新号政策：个人开发者账号需 **12 名测试者连续 14 天封闭测试** 才能申请正式发布，所以 Android 封闭测试要尽早启动。
 
-## 1. 登录并初始化项目（本地，约 2 分钟）
+## 1. 登录并初始化项目（✅ 已完成 2026-08-06）
 
-```bash
-npm install -g eas-cli
-eas login                      # 浏览器跳转 Expo 账号授权
-eas init                       # 生成 projectId，自动写入 app.json extra.eas.projectId
-```
+- eas-cli 21.6.0 已全局安装
+- robot token 存于 `secrets/expo-token.txt`（gitignored）；本机所有 eas 命令前执行：
+  `export EXPO_TOKEN=$(tr -d '[:space:]' < secrets/expo-token.txt)`（PowerShell：`$env:EXPO_TOKEN = (Get-Content secrets/expo-token.txt -Raw).Trim()`）
+- 项目已创建并链接：`@stevenzhus-team/play-weather-app`（projectId `1015e517-11ad-469d-8b66-b8dec49c58c0`），见 `app.json` 的 `extra.eas`
 
 ## 2. Android 封闭测试（先启动，14 天计时）
 
